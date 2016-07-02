@@ -46,6 +46,12 @@ A tool to dump EDKII SMM profile data, according to EDKII implementation.
 
 Tools to dump EDKII DXE Core, SMM Core, and PEI Core internal data structure, according to EDKII implementation.
 
+A user may run DxeCoreDumpApp in SHELL directly.
+A user need include PeiCoreDump.inf in BIOS to run PeiCoreDumpApp in UEFI SHELL.
+A user need include SmmCoreDump.inf in BIOS to run SmmCoreDumpApp in UEFI SHELL.
+
+These core database dump features are only for debug purpose. Please do not include these PeiCoreDump and SmmCoreDump in a production BIOS.
+
 ## Known limitation:
 This package is only the sample code to show the concept.
 It does not have a full validation and does not meet the production quality yet.
