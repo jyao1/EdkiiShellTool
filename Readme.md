@@ -47,4 +47,7 @@ A tool to dump EDKII SMM profile data, according to EDKII implementation.
 Tools to dump EDKII DXE Core, SMM Core, and PEI Core internal data structure, according to EDKII implementation.
 
 ## Known limitation:
+This package is only the sample code to show the concept.
+It does not have a full validation and does not meet the production quality yet.
+
 Some tools use edk2 open source package internal data structure. They work only on a UEFI BIOS based on open source edk2 package. 
