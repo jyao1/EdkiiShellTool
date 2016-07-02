@@ -1,0 +1,72 @@
+## @file
+#
+# Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+# This program and the accompanying materials are licensed and made available under
+# the terms and conditions of the BSD License that accompanies this distribution.
+# The full text of the license may be found at
+# http://opensource.org/licenses/bsd-license.php.
+#
+# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SmmCoreDump
+  FILE_GUID                      = 399E9030-E485-4789-8AB9-CAA24B00BD1F
+  MODULE_TYPE                    = DXE_SMM_DRIVER
+  VERSION_STRING                 = 1.0
+  PI_SPECIFICATION_VERSION       = 0x0001000A
+  ENTRY_POINT                    = SmmCoreDumpEntrypoint
+
+[Sources]
+  SmmCoreDump.c
+  SmmCoreDumpHandler.c
+  SupportGuid.c
+  SupportString.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  EdkiiShellToolPkg/EdkiiShellToolPkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  UefiBootServicesTableLib
+  SmmServicesTableLib
+  UefiLib
+  PrintLib
+  DevicePathLib
+  PeCoffGetEntryPointLib
+  DxeServicesLib
+  SmmMemLib
+  SmmChildDumpLib
+
+[Protocols]
+  gEfiSmmAccess2ProtocolGuid
+  gEfiSmmReadyToLockProtocolGuid
+  gEfiSmmEndOfDxeProtocolGuid
+
+  gEfiLoadedImageDevicePathProtocolGuid
+  gEfiSmmCpuProtocolGuid
+  gEfiSmmCpuIo2ProtocolGuid
+  gEfiSmmPciRootBridgeIoProtocolGuid
+  gEfiSmmStatusCodeProtocolGuid
+  gEfiSmmSwDispatch2ProtocolGuid
+  gEfiSmmSxDispatch2ProtocolGuid
+  gEfiSmmPeriodicTimerDispatch2ProtocolGuid
+  gEfiSmmUsbDispatch2ProtocolGuid
+  gEfiSmmGpiDispatch2ProtocolGuid
+  gEfiSmmStandbyButtonDispatch2ProtocolGuid
+  gEfiSmmPowerButtonDispatch2ProtocolGuid
+  gEfiSmmIoTrapDispatch2ProtocolGuid
+  gEfiSmmRscHandlerProtocolGuid
+
+[Depex]
+  TRUE
+  #gEfiSmmStatusCodeProtocolGuid  AND
+  #gEfiSmmRscHandlerProtocolGuid

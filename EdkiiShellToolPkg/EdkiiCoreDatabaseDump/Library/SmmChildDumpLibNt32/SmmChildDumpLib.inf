@@ -1,0 +1,55 @@
+## @file
+#
+# Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+# This program and the accompanying materials are licensed and made available under
+# the terms and conditions of the BSD License that accompanies this distribution.
+# The full text of the license may be found at
+# http://opensource.org/licenses/bsd-license.php.
+#
+# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SmmChildDumpLibNt32
+  FILE_GUID                      = 169A09A8-AE92-496B-8916-95D6410DEEED
+  MODULE_TYPE                    = DXE_SMM_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SmmChildDumpLib
+
+[Sources]
+  SmmChildDumpLib.c
+  SmmChildDumpLibHandler.c
+  SmmChildDumpLibApp.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  EdkiiShellToolPkg/EdkiiShellToolPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiLib
+  PrintLib
+  DevicePathLib
+  PeCoffGetEntryPointLib
+  DxeServicesLib
+
+[Protocols]
+  gEfiSmmEndOfDxeProtocolGuid
+  gEfiSmmSwDispatch2ProtocolGuid
+  gEfiSmmSxDispatch2ProtocolGuid
+  gEfiSmmPeriodicTimerDispatch2ProtocolGuid
+  gEfiSmmUsbDispatch2ProtocolGuid
+  gEfiSmmGpiDispatch2ProtocolGuid
+  gEfiSmmStandbyButtonDispatch2ProtocolGuid
+  gEfiSmmPowerButtonDispatch2ProtocolGuid
+  gEfiSmmIoTrapDispatch2ProtocolGuid
+
+[Depex]
+  gEfiSmmSwDispatch2ProtocolGuid

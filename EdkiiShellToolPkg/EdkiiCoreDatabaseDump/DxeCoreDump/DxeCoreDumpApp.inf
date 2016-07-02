@@ -1,0 +1,119 @@
+## @file
+#
+# Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+# This program and the accompanying materials are licensed and made available under
+# the terms and conditions of the BSD License that accompanies this distribution.
+# The full text of the license may be found at
+# http://opensource.org/licenses/bsd-license.php.
+#
+# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DxeCoreDumpApp
+  FILE_GUID                      = 399E9030-E485-4789-8AB9-CAA24B00BD1F
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DxeCoreDumpEntrypoint
+
+[Sources]
+  DxeCoreDump.c
+  SupportGuid.c
+  SupportString.c
+  SupportFile.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiLib
+  PrintLib
+  DevicePathLib
+  PeCoffGetEntryPointLib
+  DxeServicesLib
+  
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiLoadedImageDevicePathProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gEfiDevicePathUtilitiesProtocolGuid
+  gEfiDevicePathToTextProtocolGuid
+  gEfiDevicePathFromTextProtocolGuid
+  gEfiDriverBindingProtocolGuid
+  gEfiPlatformDriverOverrideProtocolGuid
+  gEfiBusSpecificDriverOverrideProtocolGuid
+  gEfiDriverDiagnostics2ProtocolGuid
+  gEfiComponentName2ProtocolGuid
+  gEfiPlatformToDriverConfigurationProtocolGuid
+  gEfiDriverFamilyOverrideProtocolGuid
+  gEfiDriverHealthProtocolGuid
+  gEfiAdapterInformationProtocolGuid
+  gEfiSimpleTextInputExProtocolGuid
+  gEfiSimpleTextInProtocolGuid
+  gEfiSimpleTextOutProtocolGuid
+  gEfiSimplePointerProtocolGuid
+  gEfiAbsolutePointerProtocolGuid
+  gEfiSerialIoProtocolGuid
+  gEfiGraphicsOutputProtocolGuid
+  gEfiLoadFileProtocolGuid
+  gEfiLoadFile2ProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
+  gEfiDiskIoProtocolGuid
+  gEfiDiskIo2ProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiBlockIo2ProtocolGuid
+  gEfiBlockIoCryptoProtocolGuid
+  gEfiEraseBlockProtocolGuid
+  gEfiAtaPassThruProtocolGuid
+  gEfiStorageSecurityCommandProtocolGuid
+  gEfiNvmExpressPassThruProtocolGuid
+  gEfiSdMmcPassThruProtocolGuid
+  gEfiRamDiskProtocolGuid
+  gEfiPciRootBridgeIoProtocolGuid
+  gEfiPciIoProtocolGuid
+  gEfiScsiIoProtocolGuid
+  gEfiExtScsiPassThruProtocolGuid
+  gEfiIScsiInitiatorNameProtocolGuid
+  gEfiUsb2HcProtocolGuid
+  gEfiUsbIoProtocolGuid
+  gEfiUsbFunctionIoProtocolGuid
+  gEfiDebugSupportProtocolGuid
+  gEfiDebugPortProtocolGuid
+  gEfiDecompressProtocolGuid
+  gEfiAcpiTableProtocolGuid
+  gEfiUnicodeCollationProtocolGuid
+  gEfiUnicodeCollation2ProtocolGuid
+  gEfiRegularExpressionProtocolGuid
+  gEfiEbcProtocolGuid
+  gEfiFirmwareManagementProtocolGuid
+  gEfiHiiFontProtocolGuid
+  gEfiHiiStringProtocolGuid
+  gEfiHiiImageProtocolGuid
+  gEfiHiiImageExProtocolGuid
+  gEfiHiiImageDecoderProtocolGuid
+  gEfiHiiDatabaseProtocolGuid
+  gEfiConfigKeywordHandlerProtocolGuid
+  gEfiHiiConfigRoutingProtocolGuid
+  gEfiHiiConfigAccessProtocolGuid
+  gEfiFormBrowser2ProtocolGuid
+  gEfiHash2ServiceBindingProtocolGuid
+  gEfiHash2ProtocolGuid
+  gEfiKmsProtocolGuid
+  gEfiPkcs7VerifyProtocolGuid
+  gEfiRngProtocolGuid
+  gEfiSmartCardReaderProtocolGuid
+  gEfiSmartCardEdgeProtocolGuid
+  gEfiTimestampProtocolGuid
+
+[Depex]
+  TRUE

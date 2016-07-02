@@ -1,0 +1,53 @@
+## @file
+#
+# Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+# This program and the accompanying materials are licensed and made available under
+# the terms and conditions of the BSD License that accompanies this distribution.
+# The full text of the license may be found at
+# http://opensource.org/licenses/bsd-license.php.
+#
+# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = EsrtFmpDump
+  FILE_GUID                      = 0F5BD724-FE75-456D-8CAC-BC03F42DF30B
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = EsrtFmpDumpEntrypoint
+
+[Sources]
+  EsrtFmpDump.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  IntelFrameworkPkg/IntelFrameworkPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiLib
+  PrintLib
+  HobLib
+
+[Guids]
+  gEfiSystemResourceTableGuid
+  gWindowsUxCapsuleGuid
+  gEfiFmpCapsuleGuid
+  gEfiCapsuleGuid
+
+[Protocols]
+  gEfiFirmwareManagementProtocolGuid
+  gEsrtManagementProtocolGuid
+
+[Depex]
+  TRUE
