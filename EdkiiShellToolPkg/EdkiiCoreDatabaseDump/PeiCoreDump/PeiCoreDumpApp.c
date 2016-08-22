@@ -137,7 +137,7 @@ DumpPpiOnPpiDatabaseStruct(
       Print(L"  Ppi - %a, Interface - 0x%x", GuidToName(&Ppi->Guid), Ppi->Ppi);
       if (Ppi->Ppi != 0) {
         CHAR16  *Name;
-        Name = GetImageRefName(Ppi->ImageRef);
+        Name = GetImageRefName((UINTN)Ppi->ImageRef);
         if (StrCmp(Name, UNKNOWN_NAME) != 0) {
           Print(L" (%s)", Name);
         }
@@ -148,7 +148,7 @@ DumpPpiOnPpiDatabaseStruct(
       Print(L"  Notify - %a, Interface - 0x%x", GuidToName(&Notify->Guid), Notify->Notify);
       if (Notify->Notify != 0) {
         CHAR16  *Name;
-        Name = GetImageRefName(Notify->ImageRef);
+        Name = GetImageRefName((UINTN)Notify->ImageRef);
         if (StrCmp(Name, UNKNOWN_NAME) != 0) {
           Print(L" (%s)", Name);
         }

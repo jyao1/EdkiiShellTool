@@ -31,27 +31,27 @@ typedef struct {
   PEI_CORE_DATABASE_COMMON_HEADER     Header;
   EFI_GUID                            FileGuid;
   CHAR16                              NameString[PEI_CORE_NAME_STRING];
-  UINTN                               EntryPoint;
-  UINTN                               ImageBase;
-  UINTN                               ImageSize;
-  UINTN                               RealImageBase;
+  UINT64                              EntryPoint;
+  UINT64                              ImageBase;
+  UINT64                              ImageSize;
+  UINT64                              RealImageBase;
 } PEI_CORE_IMAGE_DATABASE_STRUCTURE;
 
 #define PEI_CORE_PPI_DATABASE_SIGNATURE SIGNATURE_32 ('P','C','P','D')
 #define PEI_CORE_PPI_DATABASE_REVISION  0x0001
 
 typedef struct {
-  UINTN      Flags;
+  UINT64     Flags;
   EFI_GUID   Guid;
-  UINTN      Ppi;
-  UINTN      ImageRef;
+  UINT64     Ppi;
+  UINT64     ImageRef;
 } PEI_CORE_PPI_STRUCTURE_PPI;
 
 typedef struct {
-  UINTN      Flags;
+  UINT64     Flags;
   EFI_GUID   Guid;
-  UINTN      Notify;
-  UINTN      ImageRef;
+  UINT64     Notify;
+  UINT64     ImageRef;
 } PEI_CORE_PPI_STRUCTURE_NOTIFY;
 
 typedef union {
@@ -61,12 +61,12 @@ typedef union {
 
 typedef struct {
   PEI_CORE_DATABASE_COMMON_HEADER     Header;
-  INTN                                PpiListEnd;
-  INTN                                NotifyListEnd;
-  INTN                                DispatchListEnd;
-  INTN                                LastDispatchedInstall;
-  INTN                                LastDispatchedNotify;
-  UINTN                               PpiCount;
+  INT64                               PpiListEnd;
+  INT64                               NotifyListEnd;
+  INT64                               DispatchListEnd;
+  INT64                               LastDispatchedInstall;
+  INT64                               LastDispatchedNotify;
+  UINT64                              PpiCount;
 //PEI_CORE_PPI_STRUCTURE              Ppi[PpiCount];
 } PEI_CORE_PPI_DATABASE_STRUCTURE;
 
