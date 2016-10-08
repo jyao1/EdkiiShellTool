@@ -424,7 +424,9 @@ AddImageStruct(
 
   mImageStruct[mImageStructCount].ImageBase = ImageBase;
   mImageStruct[mImageStructCount].ImageSize = ImageSize;
-  StrnCpyS (mImageStruct[mImageStructCount].NameString, NAME_STRING_LENGTH + 1, NameString, NAME_STRING_LENGTH);
+  if (NameString != NULL) {
+    StrnCpyS(mImageStruct[mImageStructCount].NameString, NAME_STRING_LENGTH + 1, NameString, NAME_STRING_LENGTH);
+  }
 
   mImageStructCount++;
 }

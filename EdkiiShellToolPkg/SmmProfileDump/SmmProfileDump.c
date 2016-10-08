@@ -173,7 +173,9 @@ AddImageStruct(
   mImageStruct[mImageStructCount].ImageSize = ImageSize;
   mImageStruct[mImageStructCount].LoadedImageBase = LoadedImageBase;
   mImageStruct[mImageStructCount].EntryPoint = EntryPoint;
-  StrnCpyS(mImageStruct[mImageStructCount].NameString, NAME_STRING_LENGTH + 1, NameString, NAME_STRING_LENGTH);
+  if (NameString != NULL) {
+    StrnCpyS(mImageStruct[mImageStructCount].NameString, NAME_STRING_LENGTH + 1, NameString, NAME_STRING_LENGTH);
+  }
   CopyGuid(&mImageStruct[mImageStructCount].FileGuid, Guid);
 
   mImageStructCount++;
