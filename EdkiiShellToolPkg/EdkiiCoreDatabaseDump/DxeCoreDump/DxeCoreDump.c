@@ -76,7 +76,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/HiiString.h>
 #include <Protocol/HiiImage.h>
 #include <Protocol/HiiImageEx.h>
-#include <Protocol/ImageDecoder.h>
+#include <Protocol/HiiImageDecoder.h>
 #include <Protocol/HiiDatabase.h>
 #include <Protocol/HiiConfigKeyword.h>
 #include <Protocol/HiiConfigRouting.h>
