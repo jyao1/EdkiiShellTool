@@ -38,6 +38,10 @@ A tool to dump EDKII memory type information, according to EDKII implementation.
 
 A tool to dump EDKII performance data, according to EDKII implementation. 
 
+- PcdDump
+
+A tool to dump PCD information according to PI specification and PCD internal database according to EDKII implementation. 
+
 - SmmProfileDump
 
 A tool to dump EDKII SMM profile data, according to EDKII implementation. 

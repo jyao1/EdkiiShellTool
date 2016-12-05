@@ -93,6 +93,7 @@
 
   EdkiiShellToolPkg/SmmProfileDump/SmmProfileDump.inf
   EdkiiShellToolPkg/PerfDump/PerfDump.inf
+  EdkiiShellToolPkg/PcdDump/PcdDump.inf
 
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/DxeCoreDump/DxeCoreDumpApp.inf
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/SmmCoreDump/SmmCoreDump.inf
