@@ -1,0 +1,57 @@
+## @file
+#
+# Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+# This program and the accompanying materials are licensed and made available under
+# the terms and conditions of the BSD License that accompanies this distribution.
+# The full text of the license may be found at
+# http://opensource.org/licenses/bsd-license.php.
+#
+# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DumpACPI
+  FILE_GUID                      = A8F5E907-D018-46e9-B6C6-F649293B4535
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DumpACPIEntryPoint
+
+[Sources.common]
+  DumpACPI.h
+  DumpACPI.c
+  DumpAcpiFADT.c
+  DumpAcpiFACS.c
+  DumpAcpiDSDT.c
+  DumpAcpiSSDT.c
+  DumpAcpiPSDT.c
+
+[Packages]
+  AcpiToolPkg/AcpiToolPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  ShellLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib # for serial port output
+  UefiLib
+  UefiBootServicesTableLib
+  PrintLib
+  DumpAcpiTableFuncLib
+
+[Guids]
+  gEfiAcpiTableGuid
+  gEfiAcpi20TableGuid
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
+  
