@@ -1503,14 +1503,14 @@ PrintUsage (
   Print(L"  PcdDump -DB(PEI) [FvAddress]\n");
   Print(L"  PcdDump -DB(DxE)\n");
   Print(L"  PcdDump -HOB\n");
-  Print(L"  PcdDump -PROTCOL\n");
+  Print(L"  PcdDump -PROTOCOL\n");
   Print(L"  PcdDump -FD <FdFile>\n");
   Print(L"  PcdDump -BIN(PEI) <PeiPcdDatabaseFile>\n");
   Print(L"  PcdDump -BIN(DXE) <DxePcdDatabaseFile>\n");
   Print(L"Parameter:\n");
   Print(L"  -DB:       Dump PcdDatabase file in current image.\n");
   Print(L"  -HOB:      Dump PEI Hob based PcdDatabase\n");
-  Print(L"  -PROTCOL:  Dump PCD information based upon protocol.\n");
+  Print(L"  -PROTOCOL: Dump PCD information based upon protocol.\n");
   Print(L"  -FD:       Dump PDB in the input FD file.\n");
   Print(L"  -BIN:      Dump PDB in the input binary section file, such as:\n");
   Print(L"               9B3ADA4F-AE56-4c24-8DEA-F03B7558AE50PcdPeim/PEIPcdDataBaseSec.raw\n");
