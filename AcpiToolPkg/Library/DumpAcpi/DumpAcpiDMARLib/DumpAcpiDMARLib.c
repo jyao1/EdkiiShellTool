@@ -18,7 +18,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/UefiLib.h>
 #include <Library/DumpAcpiTableFuncLib.h>
 #include <IndustryStandard/Acpi.h>
-#include <IndustryStandard/DMARemappingReportingTable.h>
+#include <IndustryStandard/DmaRemappingReportingTable.h>
 
 VOID
 DumpDmarDeviceScopeEntry (

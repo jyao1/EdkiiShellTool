@@ -24,7 +24,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/DevicePath.h>
 #include <Protocol/SimpleFileSystem.h>
 
-#include "DumpAcpi.h"
+#include "DumpACPI.h"
 
 VOID
 EFIAPI

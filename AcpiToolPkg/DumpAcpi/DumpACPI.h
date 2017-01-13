@@ -16,7 +16,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <Base.h>
 #include <Uefi.h>
-#include <IndustryStandard\Acpi.h>
+#include <IndustryStandard/Acpi.h>
 
 #ifndef MAX_FILE_NAME_LEN
 #define MAX_FILE_NAME_LEN  0x1000

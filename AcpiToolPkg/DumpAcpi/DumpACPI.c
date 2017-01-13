@@ -23,7 +23,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <Guid/Acpi.h>
 
-#include "DumpAcpi.h"
+#include "DumpACPI.h"
 
 #define RSDP_SIGN_DEFINITION SIGNATURE_32 ('R', 'S', 'D', 'P')
  
