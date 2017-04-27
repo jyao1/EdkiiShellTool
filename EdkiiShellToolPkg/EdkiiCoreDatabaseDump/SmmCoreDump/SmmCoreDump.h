@@ -92,10 +92,4 @@ StrEndWith(
   IN CHAR16                       *SubStr
   );
 
-EFI_STATUS
-AsciiStrToGuid(
-  IN  CHAR8    *Str,
-  OUT EFI_GUID *Guid
-  );
-
 #endif
