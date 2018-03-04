@@ -141,7 +141,6 @@ InternalDumpHex (
 #                         PCD_TYPE_DATA
 #                         PCD_TYPE_HII
 #                         PCD_TYPE_VPD
-#                         PCD_TYPE_SKU_ENABLED
 #                         PCD_TYPE_STRING
 #          Datum Type   : indicate PCD vaue type from following macro:
 #                         PCD_DATUM_TYPE_POINTER
@@ -156,14 +155,38 @@ InternalDumpHex (
 
 BOOLEAN
 IsSkuPcd (
-  IN UINT32  Token
+  IN PCD_DATABASE_INIT       *PcdDatabaseInit,
+  IN VOID                    *DataPtr,
+  IN UINTN                   DataSize
   )
 {
-  if ((Token & PCD_TYPE_SKU_ENABLED) != 0) {
-    return TRUE;
-  } else {
+  PCD_DATABASE_SKU_DELTA  *SkuDelta;
+  PCD_DATA_DELTA          *DeltaData;
+  UINTN                   Offset;
+
+  if (PcdDatabaseInit->LengthForAllSkus <= PcdDatabaseInit->Length) {
     return FALSE;
   }
+
+  Offset = PcdDatabaseInit->Length;
+  Offset = ALIGN_VALUE(Offset, 8);
+  SkuDelta = (PCD_DATABASE_SKU_DELTA *)((UINTN)PcdDatabaseInit + Offset);
+  while ((UINTN)SkuDelta < (UINTN)PcdDatabaseInit + PcdDatabaseInit->LengthForAllSkus) {
+    for (DeltaData = (PCD_DATA_DELTA *)(SkuDelta + 1);
+         (UINTN)DeltaData < (UINTN)SkuDelta + SkuDelta->Length;
+         DeltaData++) {
+      if (((UINTN)PcdDatabaseInit + DeltaData->Offset >= (UINTN)DataPtr) &&
+          ((UINTN)PcdDatabaseInit + DeltaData->Offset <  (UINTN)DataPtr + DataSize)) {
+        return TRUE;
+      }
+    }
+
+    Offset += SkuDelta->Length;
+    Offset = ALIGN_VALUE(Offset, 8);
+    SkuDelta = (PCD_DATABASE_SKU_DELTA *)((UINTN)PcdDatabaseInit + Offset);
+  }
+
+  return FALSE;
 }
 
 CHAR8 *
@@ -207,34 +230,6 @@ PcdDataTypeToString (
 }
 
 /**
-  Get SKU ID table from PCD database.
-
-  @param LocalTokenNumberTableIdx Index of local token number in token number table.
-  @param Database                 PCD database.
-
-  @return Pointer to SKU ID array table
-
-**/
-SKU_ID *
-GetSkuIdArray (
-  IN    UINTN             LocalTokenNumberTableIdx,
-  IN    PEI_PCD_DATABASE  *Database
-  )
-{
-  SKU_HEAD *SkuHead;
-  UINTN     LocalTokenNumber;
-
-  LocalTokenNumber = *((UINT32 *)((UINT8 *)Database + Database->LocalTokenNumberTableOffset) + LocalTokenNumberTableIdx);
-
-  ASSERT ((LocalTokenNumber & PCD_TYPE_SKU_ENABLED) != 0);
-
-  SkuHead = (SKU_HEAD *) ((UINT8 *)Database + (LocalTokenNumber & PCD_DATABASE_OFFSET_MASK));
-
-  return (SKU_ID *) ((UINT8 *)Database + SkuHead->SkuIdTableOffset);
-  
-}
-
-/**
   Get index of PCD entry in size table.
 
   @param LocalTokenNumberTableIdx Index of this PCD in local token number table.
@@ -252,7 +247,6 @@ GetSizeTableIndex (
   UINTN       Index;
   UINTN       SizeTableIdx;
   UINTN       LocalTokenNumber;
-  SKU_ID      *SkuIdTable;
   
   SizeTableIdx = 0;
 
@@ -273,22 +267,12 @@ GetSizeTableIndex (
           //
           SizeTableIdx += 2;
       } else {
-        if ((LocalTokenNumber & PCD_TYPE_SKU_ENABLED) == 0) {
           //
           // We have only two entry for Non-Sku enabled PCD entry:
           // 1) MAX SIZE
           // 2) Current Size
           //
           SizeTableIdx += 2;
-        } else {
-          //
-          // We have these entry for SKU enabled PCD entry
-          // 1) MAX SIZE
-          // 2) Current Size for each SKU_ID (It is equal to MaxSku).
-          //
-          SkuIdTable = GetSkuIdArray (Index, Database);
-          SizeTableIdx += (UINTN)*SkuIdTable + 1;
-        }
       }
     }
 
@@ -314,15 +298,12 @@ UINTN
 GetPtrTypeSize (
   IN    UINTN             LocalTokenNumberTableIdx,
   OUT   UINTN             *MaxSize,
-  IN    UINT64            SkuId,
   IN    PEI_PCD_DATABASE  *Database
   )
 {
   INTN        SizeTableIdx;
   UINTN       LocalTokenNumber;
-  SKU_ID      *SkuIdTable;
   SIZE_INFO   *SizeTable;
-  UINTN       Index;
 
   SizeTableIdx = GetSizeTableIndex (LocalTokenNumberTableIdx, Database);
 
@@ -346,120 +327,23 @@ GetPtrTypeSize (
       //
       return *MaxSize;
   } else {
-    if ((LocalTokenNumber & PCD_TYPE_SKU_ENABLED) == 0) {
       //
       // We have only two entry for Non-Sku enabled PCD entry:
       // 1) MAX SIZE
       // 2) Current Size
       //
       return SizeTable[SizeTableIdx + 1];
-    } else {
-      //
-      // We have these entry for SKU enabled PCD entry
-      // 1) MAX SIZE
-      // 2) Current Size for each SKU_ID (It is equal to MaxSku).
-      //
-      SkuIdTable = GetSkuIdArray (LocalTokenNumberTableIdx, Database);
-      for (Index = 0; Index < SkuIdTable[0]; Index++) {
-        if (SkuIdTable[1 + Index] == SkuId) {
-          return SizeTable[SizeTableIdx + 1 + Index];
-        }
-      }
-      return SizeTable[SizeTableIdx + 1];
-    }
   }
-}
-
-/**
-  Find the local token number according to SKU ID.
-
-  @param LocalTokenNumber PCD token number
-  @param Size             The size of PCD entry.
-
-  @return Token number according to SKU ID.
-
-**/
-UINT32
-GetSkuEnabledTokenNumber (
-  IN UINT32                  LocalTokenNumber,
-  IN UINTN                   Size,
-  IN UINT64                  SkuId,
-  IN PCD_DATABASE_INIT       *PcdDatabaseInit
-  ) 
-{
-  SKU_HEAD              *SkuHead;
-  SKU_ID                *SkuIdTable;
-  UINTN                 Index;
-  UINT8                 *Value;
-  BOOLEAN               FoundSku;
-
-  ASSERT ((LocalTokenNumber & PCD_TYPE_SKU_ENABLED) == 0);
-
-  SkuHead     = (SKU_HEAD *) ((UINT8 *)PcdDatabaseInit + (LocalTokenNumber & PCD_DATABASE_OFFSET_MASK));
-  Value       = (UINT8 *) ((UINT8 *)PcdDatabaseInit + (SkuHead->SkuDataStartOffset));
-  SkuIdTable  = (SKU_ID *) ((UINT8 *)PcdDatabaseInit + (SkuHead->SkuIdTableOffset));
-
-  //
-  // Find the current system's SKU ID entry in SKU ID table.
-  //
-  FoundSku = FALSE;
-  for (Index = 0; Index < SkuIdTable[0]; Index++) {
-    if (SkuId == SkuIdTable[Index + 1]) {
-      FoundSku = TRUE;
-      break;
-    }
-  }
-
-  //
-  // Find the default SKU ID entry in SKU ID table.
-  //
-  if(!FoundSku) {
-    for (Index = 0; Index < SkuIdTable[0]; Index++) {
-      if (0 == SkuIdTable[Index + 1]) {
-        break;
-      }
-    }
-  }
-  ASSERT (Index < SkuIdTable[0]);
-
-  switch (LocalTokenNumber & PCD_TYPE_ALL_SET) {
-    case PCD_TYPE_VPD:
-      Value = (UINT8 *) &(((VPD_HEAD *) Value)[Index]);
-      return (UINT32) ((Value - (UINT8 *) PcdDatabaseInit) | PCD_TYPE_VPD);
-
-    case PCD_TYPE_HII:
-      Value = (UINT8 *) &(((VARIABLE_HEAD *) Value)[Index]);
-      return (UINT32) ((Value - (UINT8 *) PcdDatabaseInit) | PCD_TYPE_HII);
-
-    case PCD_TYPE_HII|PCD_TYPE_STRING:
-      Value = (UINT8 *) &(((VARIABLE_HEAD *) Value)[Index]);
-      return (UINT32) ((Value - (UINT8 *) PcdDatabaseInit) | PCD_TYPE_HII | PCD_TYPE_STRING);
-
-    case PCD_TYPE_STRING:
-      Value = (UINT8 *) &(((STRING_HEAD *) Value)[Index]);
-      return (UINT32) ((Value - (UINT8 *) PcdDatabaseInit) | PCD_TYPE_STRING);
-
-    case PCD_TYPE_DATA:
-      Value += Size * Index;
-      return (UINT32) ((Value - (UINT8 *) PcdDatabaseInit) | PCD_TYPE_DATA);
-
-    default:
-      ASSERT (FALSE);
-  }
-
-  ASSERT (FALSE);
-
-  return 0;
 }
 
 VOID
 DumpPcdRawData (
   IN PCD_DATABASE_INIT       *PcdDatabaseInit,
-  IN UINT64                  SkuId,
-  IN UINTN                   PcdDatabaseSize,
   IN UINTN                   LocalTokenNumberTableIdx,
   IN UINT32                  LocalTokenNumber,
-  IN UINT8                   *Data
+  IN UINT8                   *Data,
+  OUT VOID                   **DataPtr,
+  OUT UINTN                  *DataSize
   )
 {
   UINTN    Size;
@@ -467,15 +351,19 @@ DumpPcdRawData (
   UINTN    Index;
   BOOLEAN  IsUninitialized;
 
-  if ((UINTN)Data - (UINTN)PcdDatabaseInit >= PcdDatabaseSize) {
+  if ((UINTN)Data - (UINTN)PcdDatabaseInit >= PcdDatabaseInit->Length) {
     IsUninitialized = TRUE;
+    *DataPtr = NULL;
+    *DataSize = 0;
   } else {
     IsUninitialized = FALSE;
+    *DataPtr = Data;
+    *DataSize = 0;
   }
 
   switch (LocalTokenNumber & PCD_DATUM_TYPE_ALL_SET) {
   case PCD_DATUM_TYPE_POINTER:
-    Size = GetPtrTypeSize(LocalTokenNumberTableIdx, &MaxSize, SkuId, PcdDatabaseInit);
+    Size = GetPtrTypeSize(LocalTokenNumberTableIdx, &MaxSize, PcdDatabaseInit);
     Print (L"    DataSize    : %d\n", Size);
     Print (L"    DataMaxSize : %d\n", MaxSize);
     Print (L"    Data        : ");
@@ -485,55 +373,201 @@ DumpPcdRawData (
       for (Index = 0; Index < Size; Index++) {
         Print (L"%02x", Data[Index]);
       }
+      *DataSize = Size;
     }
     Print (L"\n");
-    return ;
+    break ;
   case PCD_DATUM_TYPE_UINT8:
     Print (L"    Data        : ");
     if (IsUninitialized) {
       Print (L"<Uninit>");
     } else {
       Print (L"0x%02x", *(UINT8 *)Data);
+      *DataSize = sizeof(UINT8);
     }
     Print (L"\n");
-    return ;
+    break ;
   case PCD_DATUM_TYPE_UINT16:
     Print (L"    Data        : ");
     if (IsUninitialized) {
       Print (L"<Uninit>");
     } else {
       Print (L"0x%04x", *(UINT16 *)Data);
+      *DataSize = sizeof(UINT16);
     }
     Print (L"\n");
-    return ;
+    break ;
   case PCD_DATUM_TYPE_UINT32:
     Print (L"    Data        : ");
     if (IsUninitialized) {
       Print (L"<Uninit>");
     } else {
       Print (L"0x%08x", *(UINT32 *)Data);
+      *DataSize = sizeof(UINT32);
     }
     Print (L"\n");
-    return ;
+    break ;
   case PCD_DATUM_TYPE_UINT64:
     Print (L"    Data        : ");
     if (IsUninitialized) {
       Print (L"<Uninit>");
     } else {
       Print (L"0x%016lx", *(UINT64 *)Data);
+      *DataSize = sizeof(UINT64);
     }
     Print (L"\n");
-    return ;
+    break ;
+  }
+}
+
+BOOLEAN
+CopySkuPcdData (
+  IN PCD_DATABASE_INIT       *PcdDatabaseInit,
+  IN SKU_ID                  SkuId,
+  IN VOID                    *DataPtr,
+  IN UINTN                   DataSize,
+  IN OUT VOID                *DataBuffer
+  )
+{
+  PCD_DATABASE_SKU_DELTA  *SkuDelta;
+  PCD_DATA_DELTA          *DeltaData;
+  UINTN                   Offset;
+  BOOLEAN                 Result;
+
+  if (PcdDatabaseInit->LengthForAllSkus <= PcdDatabaseInit->Length) {
+    return FALSE;
+  }
+
+  Result = FALSE;
+  Offset = PcdDatabaseInit->Length;
+  Offset = ALIGN_VALUE(Offset, 8);
+  SkuDelta = (PCD_DATABASE_SKU_DELTA *)((UINTN)PcdDatabaseInit + Offset);
+  while ((UINTN)SkuDelta < (UINTN)PcdDatabaseInit + PcdDatabaseInit->LengthForAllSkus) {
+    if (SkuDelta->SkuId == SkuId) {
+      for (DeltaData = (PCD_DATA_DELTA *)(SkuDelta + 1);
+           (UINTN)DeltaData < (UINTN)SkuDelta + SkuDelta->Length;
+           DeltaData++) {
+        if (((UINTN)PcdDatabaseInit + DeltaData->Offset >= (UINTN)DataPtr) &&
+            ((UINTN)PcdDatabaseInit + DeltaData->Offset <  (UINTN)DataPtr + DataSize)) {
+          *((UINT8 *)DataBuffer + ((UINTN)PcdDatabaseInit + DeltaData->Offset - (UINTN)DataPtr)) = (UINT8)DeltaData->Value;
+          Result = TRUE;
+        }
+      }
+    }
+
+    Offset += SkuDelta->Length;
+    Offset = ALIGN_VALUE(Offset, 8);
+    SkuDelta = (PCD_DATABASE_SKU_DELTA *)((UINTN)PcdDatabaseInit + Offset);
+  }
+
+  return Result;
+}
+
+VOID
+DumpSkuPcdData (
+  IN PCD_DATABASE_INIT       *PcdDatabaseInit,
+  IN SKU_ID                  SkuId,
+  IN UINTN                   LocalTokenNumberTableIdx,
+  IN UINT32                  LocalTokenNumber,
+  IN VOID                    *DataPtr,
+  IN UINTN                   DataSize
+  )
+{
+  UINT8    *TempDataBuffer;
+  UINT64   TempData;
+  BOOLEAN  Result;
+  UINTN    Index;
+
+  switch (LocalTokenNumber & PCD_DATUM_TYPE_ALL_SET) {
+  case PCD_DATUM_TYPE_POINTER:
+    TempDataBuffer = AllocateCopyPool (DataSize, DataPtr);
+    if (TempDataBuffer == NULL) {
+      return ;
+    }
+    Result = CopySkuPcdData (PcdDatabaseInit, SkuId, DataPtr, DataSize, TempDataBuffer);
+    if (Result) {
+      Print (L"    Data        : ");
+      for (Index = 0; Index < DataSize; Index++) {
+        Print (L"%02x", TempDataBuffer[Index]);
+      }
+      Print (L" (SKU - 0x%016lx)\n", SkuId);
+    }
+    FreePool (TempDataBuffer);
+    break ;
+  case PCD_DATUM_TYPE_UINT8:
+    ASSERT (DataSize == sizeof(UINT8));
+    TempData = *(UINT8 *)DataPtr;
+    Result = CopySkuPcdData (PcdDatabaseInit, SkuId, DataPtr, DataSize, &TempData);
+    if (Result) {
+      Print (L"    Data        : ");
+      Print (L"0x%02x", TempData);
+      Print (L" (SKU - 0x%016lx)\n", SkuId);
+    }
+    break ;
+  case PCD_DATUM_TYPE_UINT16:
+    ASSERT (DataSize == sizeof(UINT16));
+    TempData = *(UINT16 *)DataPtr;
+    Result = CopySkuPcdData (PcdDatabaseInit, SkuId, DataPtr, DataSize, &TempData);
+    if (Result) {
+      Print (L"    Data        : ");
+      Print (L"0x%04x", TempData);
+      Print (L" (SKU - 0x%016lx)\n", SkuId);
+    }
+    break ;
+  case PCD_DATUM_TYPE_UINT32:
+    ASSERT (DataSize == sizeof(UINT32));
+    TempData = *(UINT32 *)DataPtr;
+    Result = CopySkuPcdData (PcdDatabaseInit, SkuId, DataPtr, DataSize, &TempData);
+    if (Result) {
+      Print (L"    Data        : ");
+      Print (L"0x%08x", TempData);
+      Print (L" (SKU - 0x%016lx)\n", SkuId);
+    }
+    break ;
+  case PCD_DATUM_TYPE_UINT64:
+    ASSERT (DataSize == sizeof(UINT64));
+    TempData = *(UINT64 *)DataPtr;
+    Result = CopySkuPcdData (PcdDatabaseInit, SkuId, DataPtr, DataSize, &TempData);
+    if (Result) {
+      Print (L"    Data        : ");
+      Print (L"0x%016lx", TempData);
+      Print (L" (SKU - 0x%016lx)\n", SkuId);
+    }
+    break ;
+  }
+}
+
+VOID
+DumpAllSkuPcdData (
+  IN PCD_DATABASE_INIT       *PcdDatabaseInit,
+  IN SKU_ID                  *SkuIdTable,
+  IN UINTN                   LocalTokenNumberTableIdx,
+  IN UINT32                  LocalTokenNumber,
+  IN VOID                    *DataPtr,
+  IN UINTN                   DataSize
+  )
+{
+  UINTN  Index;
+
+  for (Index = 1; Index <= SkuIdTable[0]; Index++) {
+    DumpSkuPcdData (
+      PcdDatabaseInit,
+      SkuIdTable[Index],
+      LocalTokenNumberTableIdx,
+      LocalTokenNumber,
+      DataPtr,
+      DataSize
+      );
   }
 }
 
 VOID
 DumpPcdData (
   IN PCD_DATABASE_INIT       *PcdDatabaseInit,
-  IN UINT64                  SkuId,
-  IN UINTN                   PcdDatabaseSize,
   IN UINTN                   LocalTokenNumberTableIdx,
-  IN UINT32                  LocalTokenNumber
+  IN UINT32                  LocalTokenNumber,
+  OUT VOID                   **DataPtr,
+  OUT UINTN                  *DataSize
   )
 {
   UINTN          Offset;
@@ -568,6 +602,7 @@ DumpPcdData (
     Print (L"    VarGuid     : %g\n", Guid);
     Print (L"    Attributes  : 0x%08x\n", VariableHead->Attributes);
     Print (L"    Property    : 0x%04x\n", VariableHead->Property);
+    Print (L"    DefaultValueOffset : 0x%04x\n", VariableHead->DefaultValueOffset);
     if ((LocalTokenNumber & PCD_TYPE_ALL_SET_WITHOUT_SKU) == (PCD_TYPE_HII|PCD_TYPE_STRING)) {
       //
       // If a HII type PCD's datum type is VOID*, the DefaultValueOffset is the index of 
@@ -587,7 +622,10 @@ DumpPcdData (
     break;
   }
   if (Data != NULL) {
-    DumpPcdRawData (PcdDatabaseInit, SkuId, PcdDatabaseSize, LocalTokenNumberTableIdx, LocalTokenNumber, Data);
+    DumpPcdRawData (PcdDatabaseInit, LocalTokenNumberTableIdx, LocalTokenNumber, Data, DataPtr, DataSize);
+  } else {
+    *DataPtr = NULL;
+    *DataSize = 0;
   }
 }
 
@@ -606,18 +644,23 @@ DumpPcdDatabase (
   SKU_ID             *SkuIdTable;
   PCD_NAME_INDEX     *PcdNameTable;
   UINT32             LocalTokenNumber;
-  UINT32             SkuTokenNumber;
+  PCD_DATABASE_SKU_DELTA  *SkuDelta;
+  PCD_DATA_DELTA          *DeltaData;
+  UINTN                   Offset;
+  VOID                    *DataPtr;
+  UINTN                   DataSize;
 
   if (!CompareGuid (&PcdDatabaseInit->Signature, &gPcdDataBaseSignatureGuid)) {
     Print (L"PCD database signature error - %g\n", &PcdDatabaseInit->Signature);
     return ;
   }
 
-  Print (L"PcdDatabaseSize             - 0x%08x\n", PcdDatabaseSize);
+  Print (L"(PcdDatabaseSize            - 0x%08x)\n", PcdDatabaseSize);
   Print (L"Signature                   - %g\n", &PcdDatabaseInit->Signature);
   Print (L"BuildVersion                - 0x%08x\n", PcdDatabaseInit->BuildVersion);
   Print (L"Length                      - 0x%08x\n", PcdDatabaseInit->Length);
   Print (L"SystemSkuId                 - 0x%016lx\n", PcdDatabaseInit->SystemSkuId);
+  Print (L"LengthForAllSkus            - 0x%08x\n", PcdDatabaseInit->LengthForAllSkus);
   Print (L"UninitDataBaseSize          - 0x%08x\n", PcdDatabaseInit->UninitDataBaseSize);
   Print (L"LocalTokenNumberTableOffset - 0x%08x\n", PcdDatabaseInit->LocalTokenNumberTableOffset);
   Print (L"ExMapTableOffset            - 0x%08x\n", PcdDatabaseInit->ExMapTableOffset);
@@ -655,9 +698,6 @@ DumpPcdDatabase (
     }
 
     Print (L"    TokenValue           - 0x%08x", LocalTokenNumber);
-    if (IsSkuPcd (LocalTokenNumber)) {
-      Print (L" (SKU)");
-    }
     Print (L" (%a) (%a)\n", PcdTypeMaskToString(LocalTokenNumber), PcdDataTypeToString(LocalTokenNumber));
 
     if (PcdDatabaseInit->PcdNameTableOffset != 0) {
@@ -667,28 +707,9 @@ DumpPcdDatabase (
       Print (L" (%a)\n", &StringTable[PcdNameTable[Index].PcdCNameIndex]);
     }
 
-    if (IsSkuPcd (LocalTokenNumber)) {
-      UINTN  Size;
-      UINTN  MaxSize;
-      UINTN  SkuIndex;
-      UINT64 SkuId;
-      
-      for (SkuIndex = 1; SkuIndex <= SkuIdTable[0]; SkuIndex++) {
-        SkuId = SkuIdTable[SkuIndex];
-
-        Size = (LocalTokenNumber & PCD_DATUM_TYPE_ALL_SET) >> PCD_DATUM_TYPE_SHIFT;
-        if (Size == 0) {
-          GetPtrTypeSize (Index, &MaxSize, SkuId, PcdDatabaseInit);
-        } else {
-          MaxSize = Size;
-        }
-        SkuTokenNumber = GetSkuEnabledTokenNumber (LocalTokenNumber & ~PCD_TYPE_SKU_ENABLED, MaxSize, SkuId, PcdDatabaseInit);
-        Print (L"    Sku(%2d) TokenValue   - 0x%08x", SkuIndex, SkuTokenNumber);
-        Print (L" (%a) (%a)\n", PcdTypeMaskToString(SkuTokenNumber), PcdDataTypeToString(SkuTokenNumber));
-        DumpPcdData (PcdDatabaseInit, SkuId, PcdDatabaseSize, Index, SkuTokenNumber);
-      }
-    } else {
-      DumpPcdData (PcdDatabaseInit, 0, PcdDatabaseSize, Index, LocalTokenNumber);
+    DumpPcdData (PcdDatabaseInit, Index, LocalTokenNumber, &DataPtr, &DataSize);
+    if (IsSkuPcd (PcdDatabaseInit, DataPtr, DataSize)) {
+      DumpAllSkuPcdData (PcdDatabaseInit, SkuIdTable, Index, LocalTokenNumber, DataPtr, DataSize);
     }
   }
   Print (L"\n");
@@ -698,9 +719,31 @@ DumpPcdDatabase (
     Print (L"  ExToken[%3d]\n", Index);
     Print (L"    ExTokenNumber        - 0x%08x\n", ExMapTable[Index].ExTokenNumber);
     Print (L"    TokenNumber          - 0x%04x\n", ExMapTable[Index].TokenNumber);
-    Print (L"    ExGuidIndex          - 0x%04x (%g)\n", ExMapTable[Index].ExGuidIndex, &GuidTable[Index]);
+    Print (L"    ExGuidIndex          - 0x%04x (%g)\n", ExMapTable[Index].ExGuidIndex, &GuidTable[ExMapTable[Index].ExGuidIndex]);
   }
   Print (L"\n");
+
+  if (PcdDatabaseInit->LengthForAllSkus > PcdDatabaseInit->Length) {
+    Print (L"PCD_DATABASE_SKU_DELTA:\n");
+    Offset = PcdDatabaseInit->Length;
+    Offset = ALIGN_VALUE(Offset, 8);
+    SkuDelta = (PCD_DATABASE_SKU_DELTA *)((UINTN)PcdDatabaseInit + Offset);
+    while ((UINTN)SkuDelta < (UINTN)PcdDatabaseInit + PcdDatabaseInit->LengthForAllSkus) {
+      Print (L"  SkuId           - 0x%016lx\n", SkuDelta->SkuId);
+      Print (L"    SkuIdCompared - 0x%016lx\n", SkuDelta->SkuIdCompared);
+      Print (L"    Length        - 0x%08x\n", SkuDelta->Length);
+      for (DeltaData = (PCD_DATA_DELTA *)(SkuDelta + 1);
+           (UINTN)DeltaData < (UINTN)SkuDelta + SkuDelta->Length;
+           DeltaData++) {
+        Print (L"    Delta.Offset  - 0x%06x\n", DeltaData->Offset);
+        Print (L"    Delta.Value   - 0x%02x\n", DeltaData->Value);
+      }
+
+      Offset += SkuDelta->Length;
+      Offset = ALIGN_VALUE(Offset, 8);
+      SkuDelta = (PCD_DATABASE_SKU_DELTA *)((UINTN)PcdDatabaseInit + Offset);
+    }
+  }
 }
 
 VOID
@@ -754,34 +797,18 @@ DumpPcdBinary (
   EFI_STATUS  Status;
   UINTN       Size;
   UINT8       *Buffer;
-  VOID        *PcdBin;
   
-  Print(L"######################\n");
-  Print(L"# PCD Section Binary #\n");
-  Print(L"######################\n");
+  Print(L"#######################\n");
+  Print(L"# PCD Database Binary #\n");
+  Print(L"#######################\n");
 
   Status = ReadFileToBuffer (FileName, &Size, (VOID **)&Buffer);
   if (EFI_ERROR(Status)) {
     Print(L"File (%s) - %r\n", FileName, Status);
     return ;
   }
-  if (IS_SECTION2(Buffer)) {
-    if (SECTION2_SIZE(Buffer) != Size) {
-      Print(L"Invalid Section2\n");
-      return ;
-    }
-    PcdBin = Buffer + sizeof(EFI_COMMON_SECTION_HEADER2);
-    Size   = Size   - sizeof(EFI_COMMON_SECTION_HEADER2);
-  } else {
-    if (SECTION_SIZE(Buffer) != Size) {
-      Print(L"Invalid Section\n");
-      return ;
-    }
-    PcdBin = Buffer + sizeof(EFI_COMMON_SECTION_HEADER);
-    Size   = Size   - sizeof(EFI_COMMON_SECTION_HEADER);
-  }
-//  InternalDumpHex (PcdBin, Size);
-  DumpPcdDatabase (PcdBin, Size, IsPei);
+//  InternalDumpHex (Buffer, Size);
+  DumpPcdDatabase ((PCD_DATABASE_INIT *)Buffer, Size, IsPei);
   FreePool (Buffer);
 }
 
@@ -1512,9 +1539,9 @@ PrintUsage (
   Print(L"  -HOB:      Dump PEI Hob based PcdDatabase\n");
   Print(L"  -PROTOCOL: Dump PCD information based upon protocol.\n");
   Print(L"  -FD:       Dump PDB in the input FD file.\n");
-  Print(L"  -BIN:      Dump PDB in the input binary section file, such as:\n");
-  Print(L"               9B3ADA4F-AE56-4c24-8DEA-F03B7558AE50PcdPeim/PEIPcdDataBaseSec.raw\n");
-  Print(L"               80CF7257-87AB-47f9-A3FE-D50B76D89541PcdDxe/DXEPcdDataBaseSec.raw\n");
+  Print(L"  -BIN:      Dump PDB in the input database binary file, such as:\n");
+  Print(L"               IA32/MdeModulePkg/Universal/PCD/Pei/Pcd/OUTPUT/PEIPcdDataBase.raw\n");
+  Print(L"               X64/MdeModulePkg/Universal/PCD/Dxe/Pcd/OUTPUT/DXEPcdDataBase.raw\n");
   // Some other way to check PCD database:
   // 1. Build report: build -y report.log
   // 2. AutoGen.c
