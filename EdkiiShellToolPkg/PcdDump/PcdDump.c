@@ -28,6 +28,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/PiPcdInfo.h>
 #include <Protocol/PcdInfo.h>
 
+#include <Guid/VariableFormat.h>
+
 #include <Guid/PcdDataBaseHobGuid.h>
 #include <Guid/PcdDataBaseSignatureGuid.h>
 #define PCD_TYPE_ALL_SET_WITHOUT_SKU   (PCD_TYPE_DATA | PCD_TYPE_HII | PCD_TYPE_VPD | PCD_TYPE_STRING)
@@ -1518,6 +1520,369 @@ DumpDxePcdProtocolInfo (
 
 }
 
+VARIABLE_STORE_HEADER *
+GetVariableStoreHeaderFromNvStore (
+  IN PCD_NV_STORE_DEFAULT_BUFFER_HEADER  *NvStoreDefaultBuffer
+  )
+{
+  PCD_DEFAULT_DATA               *PcdDefaultData;
+  UINTN                          Offset;
+  VARIABLE_STORE_HEADER          *VariableStoreHeader;
+
+  if (NvStoreDefaultBuffer->Signature != PCD_NV_STORE_DEFAULT_BUFFER_SIGNATURE) {
+    return NULL;
+  }
+
+  Offset = sizeof(PCD_NV_STORE_DEFAULT_BUFFER_HEADER);
+
+  PcdDefaultData = (VOID *)(NvStoreDefaultBuffer + 1);
+
+  Offset = Offset + PcdDefaultData->HeaderSize;
+  Offset = ALIGN_VALUE (Offset, 8);
+  VariableStoreHeader = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+
+  return VariableStoreHeader;
+}
+
+VOID *
+GetSkuDataFromNvStore (
+  IN PCD_NV_STORE_DEFAULT_BUFFER_HEADER  *NvStoreDefaultBuffer
+  )
+{
+  PCD_DEFAULT_DATA               *PcdDefaultData;
+  UINTN                          Offset;
+  VARIABLE_STORE_HEADER          *VariableStoreHeader;
+  VARIABLE_HEADER                *VariableHeader;
+  AUTHENTICATED_VARIABLE_HEADER  *AuthVariableHeader;
+
+  VariableStoreHeader = GetVariableStoreHeaderFromNvStore (NvStoreDefaultBuffer);
+  if (VariableStoreHeader == NULL) {
+    return NULL;
+  }
+  PcdDefaultData = (VOID *)(NvStoreDefaultBuffer + 1);
+
+  Offset = (UINTN)VariableStoreHeader - (UINTN)NvStoreDefaultBuffer;
+
+  Offset = Offset + sizeof(VARIABLE_STORE_HEADER);
+  Offset = ALIGN_VALUE (Offset, 4);
+  if (CompareGuid (&VariableStoreHeader->Signature, &gEfiVariableGuid)) {
+    while (Offset < PcdDefaultData->DataSize) {
+      VariableHeader = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+      Offset = Offset + sizeof(VARIABLE_HEADER);
+      Offset = Offset + VariableHeader->NameSize;
+      Offset = Offset + VariableHeader->DataSize;
+      Offset = ALIGN_VALUE (Offset, 4);
+    }
+  } else if (CompareGuid (&VariableStoreHeader->Signature, &gEfiAuthenticatedVariableGuid)) {
+    while (Offset < PcdDefaultData->DataSize) {
+      AuthVariableHeader = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+      Offset = Offset + sizeof(AUTHENTICATED_VARIABLE_HEADER);
+      Offset = Offset + AuthVariableHeader->NameSize;
+      Offset = Offset + AuthVariableHeader->DataSize;
+      Offset = ALIGN_VALUE (Offset, 4);
+    }
+  }
+
+  Offset = ALIGN_VALUE (Offset, 8);
+  if (Offset < NvStoreDefaultBuffer->Length) {
+    return (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+  }
+
+  return NULL;
+}
+
+BOOLEAN
+HasSkuData (
+  IN PCD_NV_STORE_DEFAULT_BUFFER_HEADER  *NvStoreDefaultBuffer,
+  IN VOID                                *DataPtr,
+  IN UINTN                               DataSize
+  )
+{
+  PCD_DEFAULT_DATA               *PcdDefaultData;
+  PCD_DEFAULT_INFO               *DefaultInfo;
+  UINTN                          Offset;
+  PCD_DATA_DELTA                 *DeltaData;
+  BOOLEAN                        Result;
+  VARIABLE_STORE_HEADER          *VariableStoreHeader;
+
+  PcdDefaultData = GetSkuDataFromNvStore (NvStoreDefaultBuffer);
+  if (PcdDefaultData == NULL) {
+    return FALSE;
+  }
+
+  VariableStoreHeader = GetVariableStoreHeaderFromNvStore (NvStoreDefaultBuffer);
+
+  Result = FALSE;
+  Offset = (UINTN)PcdDefaultData - (UINTN)NvStoreDefaultBuffer;
+  
+  while (Offset < NvStoreDefaultBuffer->Length) {
+    PcdDefaultData = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+    DefaultInfo = PcdDefaultData->DefaultInfo;
+
+    Offset = Offset + sizeof(PcdDefaultData->DataSize) + PcdDefaultData->HeaderSize;
+    Offset = ALIGN_VALUE (Offset, 4);
+    for (DeltaData = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+         (UINTN)DeltaData < (UINTN)PcdDefaultData + PcdDefaultData->DataSize;
+         DeltaData++) {
+      if ((((UINTN)VariableStoreHeader + DeltaData->Offset) >= (UINTN)DataPtr) &&
+          (((UINTN)VariableStoreHeader + DeltaData->Offset) < (UINTN)DataPtr + DataSize) ) {
+        Result = TRUE;
+      }
+    }
+    Offset = (UINTN)DeltaData - (UINTN)NvStoreDefaultBuffer;
+    Offset = ALIGN_VALUE (Offset, 8);
+  }
+
+  return Result;
+}
+
+VOID
+DumpAllSkuData (
+  IN PCD_NV_STORE_DEFAULT_BUFFER_HEADER  *NvStoreDefaultBuffer,
+  IN VOID                                *DataPtr,
+  IN UINTN                               DataSize
+  )
+{
+  PCD_DEFAULT_DATA               *PcdDefaultData;
+  PCD_DEFAULT_INFO               *DefaultInfo;
+  UINTN                          Index;
+  UINTN                          Offset;
+  PCD_DATA_DELTA                 *DeltaData;
+  VARIABLE_STORE_HEADER          *VariableStoreHeader;
+  UINT8                          *TempData;
+  BOOLEAN                        Result;
+
+  PcdDefaultData = GetSkuDataFromNvStore (NvStoreDefaultBuffer);
+  if (PcdDefaultData == NULL) {
+    return ;
+  }
+
+  VariableStoreHeader = GetVariableStoreHeaderFromNvStore (NvStoreDefaultBuffer);
+
+  Offset = (UINTN)PcdDefaultData - (UINTN)NvStoreDefaultBuffer;
+  
+  while (Offset < NvStoreDefaultBuffer->Length) {
+    PcdDefaultData = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+    DefaultInfo = PcdDefaultData->DefaultInfo;
+
+    Result = FALSE;
+    TempData = AllocateCopyPool (DataSize, DataPtr);
+    if (TempData == NULL) {
+      return ;
+    }
+
+    Offset = Offset + sizeof(PcdDefaultData->DataSize) + PcdDefaultData->HeaderSize;
+    Offset = ALIGN_VALUE (Offset, 4);
+    for (DeltaData = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+         (UINTN)DeltaData < (UINTN)PcdDefaultData + PcdDefaultData->DataSize;
+         DeltaData++) {
+      if ((((UINTN)VariableStoreHeader + DeltaData->Offset) >= (UINTN)DataPtr) &&
+          (((UINTN)VariableStoreHeader + DeltaData->Offset) < (UINTN)DataPtr + DataSize) ) {
+        *((UINT8 *)TempData + ((UINTN)VariableStoreHeader + DeltaData->Offset - (UINTN)DataPtr)) = (UINT8)DeltaData->Value;
+        Result = TRUE;
+      }
+    }
+
+    if (Result) {
+      Print (L"    Data       - ");
+      for (Index = 0; Index < DataSize; Index++) {
+        Print (L"%02x", TempData[Index]);
+      }
+      Print (L" (SKU:0x%016lx) (StoreId:0x%04x)", DefaultInfo->SkuId, DefaultInfo->DefaultId);
+      Print (L"\n");
+    }
+
+    FreePool (TempData);
+
+    Offset = (UINTN)DeltaData - (UINTN)NvStoreDefaultBuffer;
+    Offset = ALIGN_VALUE (Offset, 8);
+  }
+
+  return ;
+}
+
+VOID
+DumpNvStore (
+  IN PCD_NV_STORE_DEFAULT_BUFFER_HEADER  *NvStoreDefaultBuffer,
+  IN UINTN                               NvStoreDefaultBufferSize
+  )
+{
+  PCD_DEFAULT_DATA               *PcdDefaultData;
+  UINTN                          Index;
+  UINTN                          Count;
+  PCD_DEFAULT_INFO               *DefaultInfo;
+  UINTN                          Offset;
+  VARIABLE_STORE_HEADER          *VariableStoreHeader;
+  VARIABLE_HEADER                *VariableHeader;
+  AUTHENTICATED_VARIABLE_HEADER  *AuthVariableHeader;
+  UINT8                          *Data;
+  PCD_DATA_DELTA                 *DeltaData;
+  BOOLEAN                        HasDelta;
+
+  Print(L"###########################\n");
+  Print(L"# NV_STORE_DEFAULT_BUFFER #\n");
+  Print(L"###########################\n");
+
+  if (NvStoreDefaultBuffer->Signature != PCD_NV_STORE_DEFAULT_BUFFER_SIGNATURE) {
+    Print (L"NV_STORE_DEFAULT_BUFFER database signature error - 0x%08x\n", NvStoreDefaultBuffer->Signature);
+    return ;
+  }
+
+  Print (L"(NvStoreDefaultBufferSize   - 0x%08x)\n", NvStoreDefaultBufferSize);
+  Print (L"Signature                   - 0x%08x\n", NvStoreDefaultBuffer->Signature);
+  Print (L"Length                      - 0x%08x\n", NvStoreDefaultBuffer->Length);
+  Print (L"MaxLength                   - 0x%08x\n", NvStoreDefaultBuffer->MaxLength);
+
+  Offset = sizeof(PCD_NV_STORE_DEFAULT_BUFFER_HEADER);
+
+  PcdDefaultData = (VOID *)(NvStoreDefaultBuffer + 1);
+  Print (L"PcdDefaultData:\n");
+  Print (L"  DataSize                  - 0x%08x\n", PcdDefaultData->DataSize);
+  Print (L"  HeaderSize                - 0x%08x\n", PcdDefaultData->HeaderSize);
+  Count = (PcdDefaultData->HeaderSize - sizeof(PcdDefaultData->HeaderSize)) / sizeof(PCD_DEFAULT_INFO);
+  DefaultInfo = PcdDefaultData->DefaultInfo;
+  for (Index = 0; Index < Count; Index++) {
+    Print (L"  DefaultInfo[%d]:\n", Index);
+    Print (L"    SkuId                   - 0x%016lx\n", DefaultInfo->SkuId);
+    Print (L"    DefaultId               - 0x%04x\n", DefaultInfo->DefaultId);
+  }
+
+  Offset = Offset + PcdDefaultData->HeaderSize;
+  Offset = ALIGN_VALUE (Offset, 8);
+  VariableStoreHeader = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+  Print (L"VariableStoreHeader:\n");
+  Print (L"  Signature    - %g\n", &VariableStoreHeader->Signature);
+  Print (L"  Size         - 0x%08x\n", VariableStoreHeader->Size);
+  Print (L"  Format       - 0x%02x\n", VariableStoreHeader->Format);
+  Print (L"  State        - 0x%02x\n", VariableStoreHeader->State);
+  Offset = Offset + sizeof(VARIABLE_STORE_HEADER);
+  Offset = ALIGN_VALUE (Offset, 4);
+  if (CompareGuid (&VariableStoreHeader->Signature, &gEfiVariableGuid)) {
+    Print (L"(Normal Variable)\n");
+    while (Offset < PcdDefaultData->DataSize) {
+      VariableHeader = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+      Print (L"  VariableHeader:\n");
+      Print (L"    StartId    - 0x%04x\n", VariableHeader->StartId);
+      Print (L"    State      - 0x%02x\n", VariableHeader->State);
+      Print (L"    Attributes - 0x%08x\n", VariableHeader->Attributes);
+      Print (L"    NameSize   - 0x%08x\n", VariableHeader->NameSize);
+      Print (L"    DataSize   - 0x%08x\n", VariableHeader->DataSize);
+      Print (L"    VendorGuid - %g\n", &VariableHeader->VendorGuid);
+      Offset = Offset + sizeof(VARIABLE_HEADER);
+      Print (L"    VendorName - %s\n", (VOID *)((UINTN)NvStoreDefaultBuffer + Offset));
+      Offset = Offset + VariableHeader->NameSize;
+      Data = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+      Print (L"    Data       - ");
+      for (Index = 0; Index < VariableHeader->DataSize; Index++) {
+        Print (L"%02x", Data[Index]);
+      }
+      HasDelta = HasSkuData (NvStoreDefaultBuffer, Data, VariableHeader->DataSize);
+      if (HasDelta) {
+        Print (L" (SKU:Default) (StoreId:Default)");
+      }
+      Print (L"\n");
+      if (HasDelta) {
+        DumpAllSkuData (NvStoreDefaultBuffer, Data, VariableHeader->DataSize);
+      }
+
+      Offset = Offset + VariableHeader->DataSize;
+      Offset = ALIGN_VALUE (Offset, 4);
+    }
+  } else if (CompareGuid (&VariableStoreHeader->Signature, &gEfiAuthenticatedVariableGuid)) {
+    Print (L"(Auth Variable)\n");
+    while (Offset < PcdDefaultData->DataSize) {
+      AuthVariableHeader = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+      Print (L"  VariableHeader: %x\n", Offset);
+      Print (L"    StartId    - 0x%04x\n", AuthVariableHeader->StartId);
+      Print (L"    State      - 0x%02x\n", AuthVariableHeader->State);
+      Print (L"    Attributes - 0x%08x\n", AuthVariableHeader->Attributes);
+      Print (L"  * MonotonicCount - 0x%016lx\n", AuthVariableHeader->MonotonicCount);
+      Print (L"  * TimeStamp      - %t\n", &AuthVariableHeader->TimeStamp);
+      Print (L"  * PubKeyIndex    - 0x%08x\n", AuthVariableHeader->PubKeyIndex);
+      Print (L"    NameSize   - 0x%08x\n", AuthVariableHeader->NameSize);
+      Print (L"    DataSize   - 0x%08x\n", AuthVariableHeader->DataSize);
+      Print (L"    VendorGuid - %g\n", &AuthVariableHeader->VendorGuid);
+      Offset = Offset + sizeof(AUTHENTICATED_VARIABLE_HEADER);
+      Print (L"    VendorName - %s\n", (VOID *)((UINTN)NvStoreDefaultBuffer + Offset));
+      Offset = Offset + AuthVariableHeader->NameSize;
+      Data = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+      Print (L"    Data       - ");
+      for (Index = 0; Index < AuthVariableHeader->DataSize; Index++) {
+        Print (L"%02x", Data[Index]);
+      }
+      HasDelta = HasSkuData (NvStoreDefaultBuffer, Data, AuthVariableHeader->DataSize);
+      if (HasDelta) {
+        Print (L" (SKU:Default) (StoreId:Default)");
+      }
+      Print (L"\n");
+      if (HasDelta) {
+        DumpAllSkuData (NvStoreDefaultBuffer, Data, AuthVariableHeader->DataSize);
+      }
+
+      Offset = Offset + AuthVariableHeader->DataSize;
+      Offset = ALIGN_VALUE (Offset, 4);
+    }
+  }
+
+  Offset = ALIGN_VALUE (Offset, 8);
+  while (Offset < NvStoreDefaultBuffer->Length) {
+
+    PcdDefaultData = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+    Print (L"PcdDefaultData:\n");
+    Print (L"  DataSize                  - 0x%08x\n", PcdDefaultData->DataSize);
+    Print (L"  HeaderSize                - 0x%08x\n", PcdDefaultData->HeaderSize);
+    Count = (PcdDefaultData->HeaderSize - sizeof(PcdDefaultData->HeaderSize)) / sizeof(PCD_DEFAULT_INFO);
+    DefaultInfo = PcdDefaultData->DefaultInfo;
+    for (Index = 0; Index < Count; Index++) {
+      Print (L"  DefaultInfo[%d]:\n", Index);
+      Print (L"    SkuId                   - 0x%016lx\n", DefaultInfo->SkuId);
+      Print (L"    DefaultId               - 0x%04x\n", DefaultInfo->DefaultId);
+    }
+
+    Offset = Offset + sizeof(PcdDefaultData->DataSize) + PcdDefaultData->HeaderSize;
+    Offset = ALIGN_VALUE (Offset, 4);
+    Print (L"PCD_DATA_DELTA:\n");
+    for (DeltaData = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
+         (UINTN)DeltaData < (UINTN)PcdDefaultData + PcdDefaultData->DataSize;
+         DeltaData++) {
+      Print (L"    Delta.Offset  - 0x%06x\n", DeltaData->Offset);
+      Print (L"    Delta.Value   - 0x%02x\n", DeltaData->Value);
+    }
+    Offset = (UINTN)DeltaData - (UINTN)NvStoreDefaultBuffer;
+    Offset = ALIGN_VALUE (Offset, 8);
+  }
+}
+
+VOID
+DumpNvStoreFromVpd (
+  IN CHAR16  *FileName
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       Size;
+  UINT8       *Buffer;
+  UINTN       Index;
+  PCD_NV_STORE_DEFAULT_BUFFER_HEADER       *NvStoreDefaultBuffer;
+
+  Status = ReadFileToBuffer (FileName, &Size, (VOID **)&Buffer);
+  if (EFI_ERROR(Status)) {
+    Print(L"File (%s) - %r\n", FileName, Status);
+    return ;
+  }
+  if (Size <= 4) {
+    Print(L"Invalid File\n", FileName);
+    return ;
+  }
+  
+  for (Index = 0; Index < Size - 4; Index++) {
+    NvStoreDefaultBuffer = (VOID *)(Buffer + Index);
+    if (NvStoreDefaultBuffer->Signature == PCD_NV_STORE_DEFAULT_BUFFER_SIGNATURE) {
+      DumpNvStore (NvStoreDefaultBuffer, NvStoreDefaultBuffer->Length);
+    }
+  }
+  FreePool (Buffer);
+}
+
 /**
   Print APP usage.
 **/
@@ -1534,14 +1899,16 @@ PrintUsage (
   Print(L"  PcdDump -FD <FdFile>\n");
   Print(L"  PcdDump -BIN(PEI) <PeiPcdDatabaseFile>\n");
   Print(L"  PcdDump -BIN(DXE) <DxePcdDatabaseFile>\n");
+  Print(L"  PcdDump -BIN(NvStore) <VpdDatabaseFile>\n");
   Print(L"Parameter:\n");
   Print(L"  -DB:       Dump PcdDatabase file in current image.\n");
   Print(L"  -HOB:      Dump PEI Hob based PcdDatabase\n");
   Print(L"  -PROTOCOL: Dump PCD information based upon protocol.\n");
   Print(L"  -FD:       Dump PDB in the input FD file.\n");
   Print(L"  -BIN:      Dump PDB in the input database binary file, such as:\n");
-  Print(L"               IA32/MdeModulePkg/Universal/PCD/Pei/Pcd/OUTPUT/PEIPcdDataBase.raw\n");
-  Print(L"               X64/MdeModulePkg/Universal/PCD/Dxe/Pcd/OUTPUT/DXEPcdDataBase.raw\n");
+  Print(L"             PEI: IA32/MdeModulePkg/Universal/PCD/Pei/Pcd/OUTPUT/PEIPcdDataBase.raw\n");
+  Print(L"             DXE: X64/MdeModulePkg/Universal/PCD/Dxe/Pcd/OUTPUT/DXEPcdDataBase.raw\n");
+  Print(L"             VPD: FV/8C3D856A-9BE6-468E-850A-24F7A8D38E08.bin\n");
   // Some other way to check PCD database:
   // 1. Build report: build -y report.log
   // 2. AutoGen.c
@@ -1597,6 +1964,10 @@ PcdDumpEntrypoint (
   }
   if (StrCmp(Argv[1], L"-DB(DXE)") == 0) {
     DumpImagePcdDb (FALSE, 0);
+    return EFI_SUCCESS;
+  }
+  if ((StrCmp(Argv[1], L"-BIN(NvStore)") == 0) && (Argc == 3)) {
+    DumpNvStoreFromVpd (Argv[2]);
     return EFI_SUCCESS;
   }
   

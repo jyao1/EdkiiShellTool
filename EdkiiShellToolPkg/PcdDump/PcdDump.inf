@@ -53,6 +53,8 @@
   gEfiFileInfoGuid
   gPcdDataBaseHobGuid
   gPcdDataBaseSignatureGuid
+  gEfiVariableGuid
+  gEfiAuthenticatedVariableGuid
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdVpdBaseAddress  ## SOMETIMES_CONSUMES
