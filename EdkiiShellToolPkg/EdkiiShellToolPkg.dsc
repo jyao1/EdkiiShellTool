@@ -33,6 +33,7 @@
   PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
   PciLib|MdePkg/Library/BasePciLibCf8/BasePciLibCf8.inf
   PciCf8Lib|MdePkg/Library/BasePciCf8Lib/BasePciCf8Lib.inf
+  PciSegmentLib|MdePkg/Library/BasePciSegmentLibPci/BasePciSegmentLibPci.inf
   IoLib|MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
   SynchronizationLib|MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
   PcdLib|MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
@@ -92,7 +93,6 @@
   EdkiiShellToolPkg/EsrtFmpDump/EsrtFmpDump.inf
 
   EdkiiShellToolPkg/SmmProfileDump/SmmProfileDump.inf
-  EdkiiShellToolPkg/PerfDump/PerfDump.inf
   EdkiiShellToolPkg/PcdDump/PcdDump.inf
 
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/DxeCoreDump/DxeCoreDumpApp.inf
@@ -100,3 +100,5 @@
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/SmmCoreDump/SmmCoreDumpApp.inf
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/PeiCoreDump/PeiCoreDump.inf
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/PeiCoreDump/PeiCoreDumpApp.inf
+
+  EdkiiShellToolPkg/SmiPerf/SmiPerf.inf

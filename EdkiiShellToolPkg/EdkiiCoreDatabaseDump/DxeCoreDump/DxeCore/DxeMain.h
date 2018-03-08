@@ -49,9 +49,9 @@ typedef struct {
   UINTN                       ExitDataSize;   
   /// Pointer to exit data from started image
   VOID                        *ExitData;      
-  /// Pointer to pool allocation for context save/retore
+  /// Pointer to pool allocation for context save/restore
   VOID                        *JumpBuffer;    
-  /// Pointer to buffer for context save/retore
+  /// Pointer to buffer for context save/restore
   BASE_LIBRARY_JUMP_BUFFER    *JumpContext;  
   /// Machine type from PE image
   UINT16                      Machine;        
@@ -59,7 +59,7 @@ typedef struct {
   EFI_EBC_PROTOCOL            *Ebc;           
   /// Runtime image list
   EFI_RUNTIME_IMAGE_ENTRY     *RuntimeData;   
-  /// Pointer to Loaded Image Device Path Protocl
+  /// Pointer to Loaded Image Device Path Protocol
   EFI_DEVICE_PATH_PROTOCOL    *LoadedImageDevicePath;  
   /// PeCoffLoader ImageContext
   PE_COFF_LOADER_IMAGE_CONTEXT  ImageContext; 

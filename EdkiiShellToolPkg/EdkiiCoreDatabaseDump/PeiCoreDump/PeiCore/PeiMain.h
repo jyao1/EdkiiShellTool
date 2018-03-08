@@ -203,6 +203,10 @@ struct _PEI_CORE_INSTANCE {
   BOOLEAN                            HeapOffsetPositive;
   UINTN                              StackOffset;
   BOOLEAN                            StackOffsetPositive;
+  //
+  // Information for migrating memory pages allocated in pre-memory phase.
+  //
+  HOLE_MEMORY_DATA                   MemoryPages;
   PEICORE_FUNCTION_POINTER           ShadowedPeiCore;
   CACHE_SECTION_DATA                 CacheSection;
   //
@@ -233,7 +237,7 @@ struct _PEI_CORE_INSTANCE {
 
   //
   // Temp Memory Range is not covered by PeiTempMem and Stack.
-  // Those Memory Range will be migrated into phisical memory. 
+  // Those Memory Range will be migrated into physical memory.
   //
   HOLE_MEMORY_DATA                  HoleData[HOLE_MAX_NUMBER];
 };
