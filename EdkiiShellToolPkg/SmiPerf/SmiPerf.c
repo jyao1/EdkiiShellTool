@@ -46,7 +46,7 @@ InitializeSmiPerf (
   EndTsc = AsmReadTsc ();
   gBS->RestoreTPL (OldTpl);
   
-  Status = EfiGetSystemConfigurationTable (&gPerformanceProtocolGuid, &PerformanceProperty);
+  Status = EfiGetSystemConfigurationTable (&gPerformanceProtocolGuid, (VOID **)&PerformanceProperty);
   if (EFI_ERROR (Status)) {
     Print (L"PERFORMANCE_PROPERTY not found!\n");
     return EFI_NOT_FOUND;

@@ -1599,7 +1599,6 @@ HasSkuData (
   )
 {
   PCD_DEFAULT_DATA               *PcdDefaultData;
-  PCD_DEFAULT_INFO               *DefaultInfo;
   UINTN                          Offset;
   PCD_DATA_DELTA                 *DeltaData;
   BOOLEAN                        Result;
@@ -1617,7 +1616,6 @@ HasSkuData (
   
   while (Offset < NvStoreDefaultBuffer->Length) {
     PcdDefaultData = (VOID *)((UINTN)NvStoreDefaultBuffer + Offset);
-    DefaultInfo = PcdDefaultData->DefaultInfo;
 
     Offset = Offset + sizeof(PcdDefaultData->DataSize) + PcdDefaultData->HeaderSize;
     Offset = ALIGN_VALUE (Offset, 4);
