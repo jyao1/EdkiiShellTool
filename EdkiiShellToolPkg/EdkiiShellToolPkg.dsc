@@ -49,6 +49,12 @@
   DebugLib|IntelFrameworkModulePkg/Library/PeiDxeDebugLibReportStatusCode/PeiDxeDebugLibReportStatusCode.inf
   ReportStatusCodeLib|MdeModulePkg/Library/DxeReportStatusCodeLib/DxeReportStatusCodeLib.inf
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
+
+  Tpm2CommandLib|SecurityPkg\Library\Tpm2CommandLib\Tpm2CommandLib.inf
+  Tpm2DeviceLib|SecurityPkg\Library\Tpm2DeviceLibTcg2\Tpm2DeviceLibTcg2.inf
+  BaseCryptLib|CryptoPkg\Library\BaseCryptLib\BaseCryptLib.inf
+  IntrinsicLib|CryptoPkg\Library\IntrinsicLib\IntrinsicLib.inf
+  OpensslLib|CryptoPkg\Library\OpensslLib\OpensslLib.inf
   
   SmmChildDumpLib|EdkiiShellToolPkg/EdkiiCoreDatabaseDump/Library/SmmChildDumpLibNull/SmmChildDumpLibNull.inf
   #SmmChildDumpLib|EdkiiShellToolPkg/EdkiiCoreDatabaseDump/Library/SmmChildDumpLibNt32/SmmChildDumpLib.inf
@@ -103,6 +109,8 @@
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/PeiCoreDump/PeiCoreDumpApp.inf
 
   EdkiiShellToolPkg/SmiPerf/SmiPerf.inf
+
+  EdkiiShellToolPkg/Tcg2DumpLog/Tcg2DumpLog.inf
 
 [BuildOptions]
   MSVC:DEBUG_*_*_DLINK_FLAGS = /EXPORT:InitializeDriver=$(IMAGE_ENTRY_POINT) /BASE:0x10000 /ALIGN:4096 /FILEALIGN:4096 /SUBSYSTEM:CONSOLE
