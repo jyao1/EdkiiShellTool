@@ -1,0 +1,49 @@
+## @file
+#  GetPciOprom is a shell application to get PCI OPROM.
+#
+#  Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
+#
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution. The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.php
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+#
+##
+
+[Defines]
+  INF_VERSION                   = 0x00010006
+  BASE_NAME                     = GetPciOprom
+  FILE_GUID                     = 8317DBD0-457B-434D-BA38-218B4C5721B5
+  MODULE_TYPE                   = UEFI_APPLICATION
+  VERSION_STRING                = 1.0
+  ENTRY_POINT                   = GetPciOpromMain
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES          = IA32 X64
+#
+
+[Sources]
+  GetPciOprom.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  DebugLib
+  ShellLib
+  PrintLib
+  MemoryAllocationLib
+
+[Protocols]
+  gEfiPciIoProtocolGuid                 ## CONSUMES
+  gEfiDecompressProtocolGuid            ## SOMETIMES_CONSUMES
+

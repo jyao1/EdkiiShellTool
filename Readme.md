@@ -56,6 +56,10 @@ A user need include SmmCoreDump.inf in BIOS to run SmmCoreDumpApp in UEFI SHELL.
 
 These core database dump features are only for debug purpose. Please do not include these PeiCoreDump and SmmCoreDump in a production BIOS.
 
+- GetPciOprom
+
+A tool to dump PCI OPROM information and save PCI OPROM to file.
+
 ## Known limitation:
 This package is only the sample code to show the concept.
 It does not have a full validation and does not meet the production quality yet.

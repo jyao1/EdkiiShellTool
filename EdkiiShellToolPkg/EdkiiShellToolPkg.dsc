@@ -1,6 +1,6 @@
 ## @file EdkiiShellToolPkg.dsc
 #
-# Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
 # This program and the accompanying materials are licensed and made available under
 # the terms and conditions of the BSD License that accompanies this distribution.
 # The full text of the license may be found at
@@ -111,6 +111,8 @@
   EdkiiShellToolPkg/SmiPerf/SmiPerf.inf
 
   EdkiiShellToolPkg/Tcg2DumpLog/Tcg2DumpLog.inf
+
+  EdkiiShellToolPkg/GetPciOprom/GetPciOprom.inf
 
 [BuildOptions]
   MSVC:DEBUG_*_*_DLINK_FLAGS = /EXPORT:InitializeDriver=$(IMAGE_ENTRY_POINT) /BASE:0x10000 /ALIGN:4096 /FILEALIGN:4096 /SUBSYSTEM:CONSOLE
