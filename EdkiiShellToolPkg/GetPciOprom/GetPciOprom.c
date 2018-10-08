@@ -66,7 +66,6 @@ ShowHelp (
   ShellPrintEx (-1, -1, L"  -v      Show version information.\n");
   ShellPrintEx (-1, -1, L"  -f      Get PCI OPROM by Bus, Dev and Func (hexadecimal format).\n");
   ShellPrintEx (-1, -1, L"  -i      Get PCI OPROM by VendorId and DeviceId (hexadecimal format).\n");
-  ShellPrintEx (-1, -1, L"  -i      Get PCI OPROM by VendorId and DeviceId (hexadecimal format).\n");
   ShellPrintEx (-1, -1, L"Dump PCI OPROM information for all PCI devices if no -f/-i option is specified.\n");
   ShellPrintEx (-1, -1, L"Dump PCI OPROM information and save PCI OPROM to file for the specified PCI device\n");
   ShellPrintEx (-1, -1, L"if -f/-i option is specified.\n");
