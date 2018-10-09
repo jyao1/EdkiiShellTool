@@ -218,7 +218,15 @@ SavePciOpromToFile (
     return Status;
   }
 
-  return ShellWriteFile (FileHandle, &BufferSize, Buffer);
+  Status = ShellWriteFile (FileHandle, &BufferSize, Buffer);
+  if (EFI_ERROR (Status)) {
+    ShellPrintEx (-1, -1, NULL, L"%H%a%N: Cannot write file - '%H%s%N'\n", __FUNCTION__, FileName);
+    ShellDeleteFile (&FileHandle);
+    return Status;
+  }
+
+  ShellCloseFile (&FileHandle);
+  return Status;
 }
 
 /**
@@ -311,7 +319,7 @@ ProcessPciRomImage (
       //
       LegacyRomHeader = (EFI_LEGACY_EXPANSION_ROM_HEADER *) EfiRomHeader;
       ShellPrintEx (-1, -1, L"  EFI_LEGACY_EXPANSION_ROM_HEADER:\n");
-      ShellPrintEx (-1, -1, L"    Signature            = 0x%08x\n", LegacyRomHeader->Signature);
+      ShellPrintEx (-1, -1, L"    Signature            = 0x%04x\n", LegacyRomHeader->Signature);
       ShellPrintEx (-1, -1, L"    Size512              = 0x%x\n", LegacyRomHeader->Size512);
       ShellPrintEx (-1, -1, L"    InitEntryPoint       = 0x%06x\n", (*(UINT32 *) LegacyRomHeader->InitEntryPoint) & 0x00FFFFFF);
       ShellPrintEx (-1, -1, L"    PcirOffset           = 0x%x\n", LegacyRomHeader->PcirOffset);
@@ -324,7 +332,7 @@ ProcessPciRomImage (
       // It is a EFI OPROM entry.
       //
       ShellPrintEx (-1, -1, L"  EFI_PCI_EXPANSION_ROM_HEADER:\n");
-      ShellPrintEx (-1, -1, L"    Signature            = 0x%08x\n", LegacyRomHeader->Signature);
+      ShellPrintEx (-1, -1, L"    Signature            = 0x%04x\n", LegacyRomHeader->Signature);
       ShellPrintEx (-1, -1, L"    InitializationSize   = 0x%x\n", EfiRomHeader->InitializationSize);
       ShellPrintEx (-1, -1, L"    EfiSubsystem         = 0x%x (%s)\n", EfiRomHeader->EfiSubsystem, GetSubSystemName (EfiRomHeader->EfiSubsystem));
       ShellPrintEx (-1, -1, L"    EfiMachineType       = 0x%x (%s)\n", EfiRomHeader->EfiMachineType, GetMachineTypeName (EfiRomHeader->EfiMachineType));
