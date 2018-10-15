@@ -185,6 +185,7 @@ MemoryTypeInfoEntrypoint (
   if (!EFI_ERROR(Status)) {
     //Print (L"MemoryTypeInfo in Variable (Next):\n");
     //DumpMemoryTypeInformation (VariableMemoryTypeInformation);
+    FreePool (VariableMemoryTypeInformation);
   }
 
   if ((CurrentMemoryTypeInformation != NULL) && (PreviousMemoryTypeInformation != NULL)) {
