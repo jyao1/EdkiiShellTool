@@ -39,6 +39,3 @@
   
 [Guids]
   gEfiMemoryTypeInformationGuid
-
-[Depex]
-  TRUE
