@@ -1,0 +1,42 @@
+## @file
+#
+# Copyright (c) 2017, Intel Corporation. All rights reserved.<BR>
+# This program and the accompanying materials are licensed and made available under
+# the terms and conditions of the BSD License that accompanies this distribution.
+# The full text of the license may be found at
+# http://opensource.org/licenses/bsd-license.php.
+#
+# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = UsbInfo
+  FILE_GUID                      = 03C5A8B3-D02D-4f22-9634-C527515AA6C6
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+
+[sources]
+  UsbInfo.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  UefiLib
+  UefiBootServicesTableLib
+  DxeServicesTableLib
+  PrintLib
+  DevicePathLib
+
+[Protocols]
+  gEfiUsbIoProtocolGuid
+  gEfiUsb2HcProtocolGuid
+  gEfiPciIoProtocolGuid
