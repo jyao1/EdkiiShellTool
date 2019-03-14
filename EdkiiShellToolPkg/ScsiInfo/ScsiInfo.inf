@@ -13,14 +13,14 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = UsbInfo
-  FILE_GUID                      = 03C5A8B3-D02D-4f22-9634-C527515AA6C6
+  BASE_NAME                      = ScsiInfo
+  FILE_GUID                      = DDD326C3-C367-4782-B445-8D6C4145A6F8
   MODULE_TYPE                    = UEFI_APPLICATION
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = UsbInfoEntryPoint
+  ENTRY_POINT                    = ScsiInfoEntryPoint
 
 [sources]
-  UsbInfo.c
+  ScsiInfo.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -38,6 +38,5 @@
   DevicePathLib
 
 [Protocols]
-  gEfiUsbIoProtocolGuid
-  gEfiUsb2HcProtocolGuid
   gEfiPciIoProtocolGuid
+  gEfiScsiPassThruProtocolGuid

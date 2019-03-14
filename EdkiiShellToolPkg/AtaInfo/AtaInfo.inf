@@ -13,14 +13,14 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = UsbInfo
-  FILE_GUID                      = 03C5A8B3-D02D-4f22-9634-C527515AA6C6
+  BASE_NAME                      = AtaInfo
+  FILE_GUID                      = E4730781-D78F-4c45-9604-04D852B45828
   MODULE_TYPE                    = UEFI_APPLICATION
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = UsbInfoEntryPoint
+  ENTRY_POINT                    = AtaInfoEntryPoint
 
 [sources]
-  UsbInfo.c
+  AtaInfo.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -38,6 +38,4 @@
   DevicePathLib
 
 [Protocols]
-  gEfiUsbIoProtocolGuid
-  gEfiUsb2HcProtocolGuid
   gEfiPciIoProtocolGuid
