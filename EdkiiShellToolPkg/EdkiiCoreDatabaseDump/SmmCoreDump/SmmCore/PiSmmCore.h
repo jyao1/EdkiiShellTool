@@ -2,14 +2,14 @@
   The internal header file includes the common header files, defines
   internal structure and functions used by SmmCore module.
 
-  Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials are licensed and made available 
-  under the terms and conditions of the BSD License which accompanies this 
-  distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  This program and the accompanying materials are licensed and made available
+  under the terms and conditions of the BSD License which accompanies this
+  distribution.  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php
 
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 **/
 
@@ -17,6 +17,32 @@
 #define _SMM_CORE_H_
 
 #include <Protocol/FirmwareVolume2.h>
+
+//
+// SMM_HANDLER - used for each SMM handler
+//
+
+#define SMI_ENTRY_SIGNATURE  SIGNATURE_32('s','m','i','e')
+
+ typedef struct {
+  UINTN       Signature;
+  LIST_ENTRY  AllEntries;  // All entries
+
+  EFI_GUID    HandlerType; // Type of interrupt
+  LIST_ENTRY  SmiHandlers; // All handlers
+} SMI_ENTRY;
+
+#define SMI_HANDLER_SIGNATURE  SIGNATURE_32('s','m','i','h')
+
+ typedef struct {
+  UINTN                         Signature;
+  LIST_ENTRY                    Link;        // Link on SMI_ENTRY.SmiHandlers
+  EFI_SMM_HANDLER_ENTRY_POINT2  Handler;     // The smm handler's entry point
+  UINTN                         CallerAddr;  // The address of caller who register the SMI handler.
+  SMI_ENTRY                     *SmiEntry;
+  VOID                          *Context;    // for profile
+  UINTN                         ContextSize; // for profile
+} SMI_HANDLER;
 
 //
 // Structure for recording the state of an SMM Driver
@@ -53,7 +79,7 @@ typedef struct {
   //
   PHYSICAL_ADDRESS                ImageEntryPoint;
   //
-  // Image Buffer in SMRAM  
+  // Image Buffer in SMRAM
   //
   PHYSICAL_ADDRESS                ImageBuffer;
   //

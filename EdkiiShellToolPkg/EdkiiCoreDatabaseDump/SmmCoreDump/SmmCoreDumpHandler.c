@@ -30,7 +30,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 #include "SmmCore/SmmCore.h"
 #include "SmmCore/PiSmmCore.h"
-#include "SmmCore/Smi.h"
 
 extern LIST_ENTRY      *mSmmCoreHandleList;
 extern LIST_ENTRY      *mSmmCoreProtocolDatabase;

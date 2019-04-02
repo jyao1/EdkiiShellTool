@@ -40,6 +40,7 @@ BuildImageDatabaseData(
 {
   PEI_CORE_IMAGE_DATABASE_STRUCTURE  *ImageStruct;
   UINTN                              Index;
+  UINTN                              TotalPeimCount;
 
   ImageStruct = Data;
   for (Index = 0; Index < mImageStructCount; Index++) {
@@ -53,7 +54,9 @@ BuildImageDatabaseData(
     ImageStruct[Index].ImageSize = mImageStruct[Index].ImageSize;
     ImageStruct[Index].RealImageBase = mImageStruct[Index].ImageBase;
   }
-  for (; Index < PrivateData->FvCount * PcdGet32(PcdPeiCoreMaxPeimPerFv); Index++) {
+
+  TotalPeimCount = CalcTotalPeimCount (PrivateData);
+  for (; Index < TotalPeimCount; Index++) {
     ZeroMem(&ImageStruct[Index], sizeof(PEI_CORE_IMAGE_DATABASE_STRUCTURE));
     ImageStruct[Index].Header.Signature = PEI_CORE_IMAGE_DATABASE_SIGNATURE;
     ImageStruct[Index].Header.Length = sizeof(PEI_CORE_IMAGE_DATABASE_STRUCTURE);
@@ -62,39 +65,17 @@ BuildImageDatabaseData(
 }
 
 VOID
-BuildPpiDatabaseData(
-  IN PEI_CORE_INSTANCE   *PrivateData,
-  IN VOID                *Data
+BuildPpiData (
+  IN PEI_PPI_LIST_POINTERS       *PpiListPtrs,
+  IN UINTN                       CurrentCount,
+  IN OUT PEI_CORE_PPI_STRUCTURE  *PpiStructure
   )
 {
-  PEI_PPI_DATABASE                 *PpiData;
-  PEI_CORE_PPI_DATABASE_STRUCTURE  *PpiDatabase;
-  PEI_CORE_PPI_STRUCTURE           *PpiStructure;
-  INTN                             Index;
-  PEI_PPI_LIST_POINTERS            *PpiListPtrs;
+  UINTN                            Index;
   EFI_PEI_PPI_DESCRIPTOR           *Ppi;
   EFI_PEI_NOTIFY_DESCRIPTOR        *Notify;
 
-  PpiData = &PrivateData->PpiData;
-
-  PpiDatabase = Data;
-  PpiDatabase->Header.Signature = PEI_CORE_PPI_DATABASE_SIGNATURE;
-  PpiDatabase->Header.Length = sizeof(PEI_CORE_PPI_DATABASE_STRUCTURE) + PcdGet32(PcdPeiCoreMaxPpiSupported) * sizeof(PEI_CORE_PPI_STRUCTURE);
-  PpiDatabase->Header.Revision = PEI_CORE_PPI_DATABASE_REVISION;
-  PpiDatabase->PpiListEnd = PpiData->PpiListEnd;
-  PpiDatabase->NotifyListEnd = PpiData->NotifyListEnd;
-  PpiDatabase->DispatchListEnd = PpiData->DispatchListEnd;
-  PpiDatabase->LastDispatchedInstall = PpiData->LastDispatchedInstall;
-  PpiDatabase->LastDispatchedNotify = PpiData->LastDispatchedNotify;
-  PpiDatabase->PpiCount = PcdGet32(PcdPeiCoreMaxPpiSupported);
-  PpiStructure = (VOID *)(PpiDatabase + 1);
-
-  ZeroMem(PpiStructure, PcdGet32(PcdPeiCoreMaxPpiSupported) * sizeof(PEI_CORE_PPI_STRUCTURE));
-
-  PpiListPtrs = PpiData->PpiListPtrs;
-  for (Index = 0;
-       Index < (INTN)PcdGet32(PcdPeiCoreMaxPpiSupported);
-       Index++) {
+  for (Index = 0; Index < CurrentCount; Index++) {
     if (PpiListPtrs[Index].Ppi == NULL) {
       continue;
     }
@@ -111,6 +92,46 @@ BuildPpiDatabaseData(
       PpiStructure[Index].Notify.ImageRef = AddressToImageRef((UINTN)Notify->Notify);
     }
   }
+}
+
+VOID
+BuildPpiDatabaseData(
+  IN PEI_CORE_INSTANCE   *PrivateData,
+  IN VOID                *Data
+  )
+{
+  PEI_PPI_DATABASE                 *PpiData;
+  PEI_CORE_PPI_DATABASE_STRUCTURE  *PpiDatabase;
+  PEI_CORE_PPI_STRUCTURE           *PpiStructure;
+  UINTN                            Index;
+  UINTN                            TotalPpiDataCount;
+
+  PpiData = &PrivateData->PpiData;
+
+  TotalPpiDataCount = CalcTotalPpiDataCount (PrivateData);
+
+  PpiDatabase = Data;
+  PpiDatabase->Header.Signature = PEI_CORE_PPI_DATABASE_SIGNATURE;
+  PpiDatabase->Header.Length = (UINT32)(sizeof(PEI_CORE_PPI_DATABASE_STRUCTURE) + TotalPpiDataCount * sizeof(PEI_CORE_PPI_STRUCTURE));
+  PpiDatabase->Header.Revision = PEI_CORE_PPI_DATABASE_REVISION;
+  PpiDatabase->PpiListCurrentCount = PpiData->PpiList.CurrentCount;
+  PpiDatabase->PpiListMaxCount = PpiData->PpiList.MaxCount;
+  PpiDatabase->PpiListLastDispatchedCount = PpiData->PpiList.LastDispatchedCount;
+  PpiDatabase->CallbackNotifyListCurrentCount = PpiData->CallbackNotifyList.CurrentCount;
+  PpiDatabase->CallbackNotifyListMaxCount = PpiData->CallbackNotifyList.MaxCount;
+  PpiDatabase->DispatchNotifyListCurrentCount = PpiData->DispatchNotifyList.CurrentCount;
+  PpiDatabase->DispatchNotifyListMaxCount = PpiData->DispatchNotifyList.MaxCount;
+  PpiDatabase->DispatchNotifyListLastDispatchedCount = PpiData->DispatchNotifyList.LastDispatchedCount;
+  PpiStructure = (VOID *)(PpiDatabase + 1);
+
+  ZeroMem(PpiStructure, TotalPpiDataCount * sizeof(PEI_CORE_PPI_STRUCTURE));
+
+  Index = 0;
+  BuildPpiData (PpiData->PpiList.PpiPtrs, PpiData->PpiList.CurrentCount, &PpiStructure[Index]);
+  Index += PpiData->PpiList.CurrentCount;
+  BuildPpiData (PpiData->CallbackNotifyList.NotifyPtrs, PpiData->CallbackNotifyList.CurrentCount, &PpiStructure[Index]);
+  Index += PpiData->CallbackNotifyList.CurrentCount;
+  BuildPpiData (PpiData->DispatchNotifyList.NotifyPtrs, PpiData->DispatchNotifyList.CurrentCount, &PpiStructure[Index]);
 
   return;
 }
@@ -144,11 +165,16 @@ BuildPeiCoreDatabase(
   EFI_PEI_SERVICES  **PeiServices;
   EFI_HOB_GUID_TYPE *Hob;
   EFI_STATUS        Status;
+  UINTN             TotalPpiDataCount;
+  UINTN             TotalPeimCount;
 
   PeiServices = &((PEI_CORE_INSTANCE *)PrivateData)->Ps;
 
-  ImageDatabaseSize = ((PEI_CORE_INSTANCE *)PrivateData)->FvCount * PcdGet32(PcdPeiCoreMaxPeimPerFv) * sizeof(PEI_CORE_IMAGE_DATABASE_STRUCTURE);
-  PpiDatabaseSize = sizeof(PEI_CORE_PPI_DATABASE_STRUCTURE) + PcdGet32(PcdPeiCoreMaxPpiSupported) * sizeof(PEI_CORE_PPI_STRUCTURE);
+  TotalPpiDataCount = CalcTotalPpiDataCount (PrivateData);
+  TotalPeimCount = CalcTotalPeimCount (PrivateData);
+
+  ImageDatabaseSize = TotalPeimCount * sizeof(PEI_CORE_IMAGE_DATABASE_STRUCTURE);
+  PpiDatabaseSize = sizeof(PEI_CORE_PPI_DATABASE_STRUCTURE) + TotalPpiDataCount * sizeof(PEI_CORE_PPI_STRUCTURE);
   MemoryInfoSize = sizeof(PEI_CORE_MEMORY_INFO_STRUCTURE);
 
   Status = (*PeiServices)->CreateHob(

@@ -105,8 +105,8 @@
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/DxeCoreDump/DxeCoreDumpApp.inf
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/SmmCoreDump/SmmCoreDump.inf
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/SmmCoreDump/SmmCoreDumpApp.inf
-  #EdkiiShellToolPkg/EdkiiCoreDatabaseDump/PeiCoreDump/PeiCoreDump.inf
-  #EdkiiShellToolPkg/EdkiiCoreDatabaseDump/PeiCoreDump/PeiCoreDumpApp.inf
+  EdkiiShellToolPkg/EdkiiCoreDatabaseDump/PeiCoreDump/PeiCoreDump.inf
+  EdkiiShellToolPkg/EdkiiCoreDatabaseDump/PeiCoreDump/PeiCoreDumpApp.inf
 
   EdkiiShellToolPkg/SmiPerf/SmiPerf.inf
   EdkiiShellToolPkg/GetVariablePerf/GetVariablePerf.inf

@@ -50,7 +50,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 #include "SmmCore/SmmCore.h"
 #include "SmmCore/PiSmmCore.h"
-#include "SmmCore/Smi.h"
 
 typedef struct {
   EFI_GUID   *Guid;

@@ -32,6 +32,16 @@ BuildPeiCoreDatabase(
   );
 
 UINTN
+CalcTotalPeimCount (
+  IN VOID   *PrivateData
+  );
+
+UINTN
+CalcTotalPpiDataCount (
+  IN VOID   *PrivateData
+  );
+
+UINTN
 AddressToImageRef(
   IN UINTN  Address
   );

@@ -119,17 +119,16 @@ DumpPeiLoadedImage(
 }
 
 VOID
-DumpPpiOnPpiDatabaseStruct(
-  IN PEI_CORE_PPI_DATABASE_STRUCTURE  *PpiDatabaseStruct
+DumpPpiPtrsOnPpiDatabaseStruct(
+  PEI_CORE_PPI_STRUCTURE         *PpiStruct,
+  IN UINTN                       CurrentCount
   )
 {
-  PEI_CORE_PPI_STRUCTURE         *PpiStruct;
   PEI_CORE_PPI_STRUCTURE_PPI     *Ppi;
   PEI_CORE_PPI_STRUCTURE_NOTIFY  *Notify;
   UINTN                   Index;
 
-  PpiStruct = (VOID *)((UINTN)PpiDatabaseStruct + sizeof(PEI_CORE_PPI_DATABASE_STRUCTURE));
-  for (Index = 0; Index < PpiDatabaseStruct->PpiCount; Index++) {
+  for (Index = 0; Index < CurrentCount; Index++) {
     if (PpiStruct[Index].Ppi.Flags == 0) {
       continue;
     }
@@ -161,6 +160,27 @@ DumpPpiOnPpiDatabaseStruct(
 }
 
 VOID
+DumpPpiOnPpiDatabaseStruct(
+  IN PEI_CORE_PPI_DATABASE_STRUCTURE  *PpiDatabaseStruct
+  )
+{
+  PEI_CORE_PPI_STRUCTURE         *PpiStruct;
+  UINTN                          Index;
+
+  PpiStruct = (PEI_CORE_PPI_STRUCTURE *)((UINTN)PpiDatabaseStruct + sizeof(PEI_CORE_PPI_DATABASE_STRUCTURE));
+  Index = 0;
+
+  Print (L"PpiList.PpiPtrs :\n");
+  DumpPpiPtrsOnPpiDatabaseStruct (&PpiStruct[Index], (UINTN)PpiDatabaseStruct->PpiListCurrentCount);
+  Index += (UINTN)PpiDatabaseStruct->PpiListCurrentCount;
+  Print (L"CallbackNotifyList.NotifyPtrs :\n");
+  DumpPpiPtrsOnPpiDatabaseStruct (&PpiStruct[Index], (UINTN)PpiDatabaseStruct->CallbackNotifyListCurrentCount);
+  Index += (UINTN)PpiDatabaseStruct->CallbackNotifyListCurrentCount;
+  Print (L"DispatchNotifyList.NotifyPtrs :\n");
+  DumpPpiPtrsOnPpiDatabaseStruct (&PpiStruct[Index], (UINTN)PpiDatabaseStruct->DispatchNotifyListCurrentCount);
+}
+
+VOID
 DumpPpiDatabase(
   VOID
   )
@@ -170,12 +190,14 @@ DumpPpiDatabase(
   PpiDatabaseStruct = (VOID *)mPeiCoreDatabase;
   while ((UINTN)PpiDatabaseStruct < (UINTN)mPeiCoreDatabase + mPeiCoreDatabaseSize) {
     if (PpiDatabaseStruct->Header.Signature == PEI_CORE_PPI_DATABASE_SIGNATURE) {
-      Print(L"PpiListEnd            - %d\n", PpiDatabaseStruct->PpiListEnd);
-      Print(L"NotifyListEnd         - %d\n", PpiDatabaseStruct->NotifyListEnd);
-      Print(L"DispatchListEnd       - %d\n", PpiDatabaseStruct->DispatchListEnd);
-      Print(L"LastDispatchedInstall - %d\n", PpiDatabaseStruct->LastDispatchedInstall);
-      Print(L"LastDispatchedNotify  - %d\n", PpiDatabaseStruct->LastDispatchedNotify);
-      Print(L"PpiCount              - %d\n", PpiDatabaseStruct->PpiCount);
+      Print(L"PpiList.CurrentCount                   - %d\n", PpiDatabaseStruct->PpiListCurrentCount);
+      Print(L"PpiList.MaxCount                       - %d\n", PpiDatabaseStruct->PpiListMaxCount);
+      Print(L"PpiList.LastDispatchedCount            - %d\n", PpiDatabaseStruct->PpiListLastDispatchedCount);
+      Print(L"CallbackNotifyList.CurrentCount        - %d\n", PpiDatabaseStruct->CallbackNotifyListCurrentCount);
+      Print(L"CallbackNotifyList.MaxCount            - %d\n", PpiDatabaseStruct->CallbackNotifyListMaxCount);
+      Print(L"DispatchNotifyList.CurrentCount        - %d\n", PpiDatabaseStruct->DispatchNotifyListCurrentCount);
+      Print(L"DispatchNotifyList.MaxCount            - %d\n", PpiDatabaseStruct->DispatchNotifyListMaxCount);
+      Print(L"DispatchNotifyList.LastDispatchedCount - %d\n", PpiDatabaseStruct->DispatchNotifyListLastDispatchedCount);
       DumpPpiOnPpiDatabaseStruct(PpiDatabaseStruct);
       break;
     }

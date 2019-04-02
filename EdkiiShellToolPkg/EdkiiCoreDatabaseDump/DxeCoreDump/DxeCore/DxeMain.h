@@ -26,43 +26,43 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 typedef struct {
   UINTN                       Signature;
   /// Image handle
-  EFI_HANDLE                  Handle;   
+  EFI_HANDLE                  Handle;
   /// Image type
-  UINTN                       Type;           
+  UINTN                       Type;
   /// If entrypoint has been called
-  BOOLEAN                     Started;        
+  BOOLEAN                     Started;
   /// The image's entry point
-  EFI_IMAGE_ENTRY_POINT       EntryPoint;     
+  EFI_IMAGE_ENTRY_POINT       EntryPoint;
   /// loaded image protocol
-  EFI_LOADED_IMAGE_PROTOCOL   Info;           
+  EFI_LOADED_IMAGE_PROTOCOL   Info;
   /// Location in memory
-  EFI_PHYSICAL_ADDRESS        ImageBasePage;  
+  EFI_PHYSICAL_ADDRESS        ImageBasePage;
   /// Number of pages
-  UINTN                       NumberOfPages;  
+  UINTN                       NumberOfPages;
   /// Original fixup data
-  CHAR8                       *FixupData;     
+  CHAR8                       *FixupData;
   /// Tpl of started image
-  EFI_TPL                     Tpl;            
+  EFI_TPL                     Tpl;
   /// Status returned by started image
-  EFI_STATUS                  Status;         
+  EFI_STATUS                  Status;
   /// Size of ExitData from started image
-  UINTN                       ExitDataSize;   
+  UINTN                       ExitDataSize;
   /// Pointer to exit data from started image
-  VOID                        *ExitData;      
+  VOID                        *ExitData;
   /// Pointer to pool allocation for context save/restore
-  VOID                        *JumpBuffer;    
+  VOID                        *JumpBuffer;
   /// Pointer to buffer for context save/restore
-  BASE_LIBRARY_JUMP_BUFFER    *JumpContext;  
+  BASE_LIBRARY_JUMP_BUFFER    *JumpContext;
   /// Machine type from PE image
-  UINT16                      Machine;        
+  UINT16                      Machine;
   /// EBC Protocol pointer
-  EFI_EBC_PROTOCOL            *Ebc;           
+  EFI_EBC_PROTOCOL            *Ebc;
   /// Runtime image list
-  EFI_RUNTIME_IMAGE_ENTRY     *RuntimeData;   
+  EFI_RUNTIME_IMAGE_ENTRY     *RuntimeData;
   /// Pointer to Loaded Image Device Path Protocol
-  EFI_DEVICE_PATH_PROTOCOL    *LoadedImageDevicePath;  
+  EFI_DEVICE_PATH_PROTOCOL    *LoadedImageDevicePath;
   /// PeCoffLoader ImageContext
-  PE_COFF_LOADER_IMAGE_CONTEXT  ImageContext; 
+  PE_COFF_LOADER_IMAGE_CONTEXT  ImageContext;
   /// Status returned by LoadImage() service.
   EFI_STATUS                  LoadImageStatus;
 } LOADED_IMAGE_PRIVATE_DATA;

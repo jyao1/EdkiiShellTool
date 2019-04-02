@@ -61,13 +61,17 @@ typedef union {
 
 typedef struct {
   PEI_CORE_DATABASE_COMMON_HEADER     Header;
-  INT64                               PpiListEnd;
-  INT64                               NotifyListEnd;
-  INT64                               DispatchListEnd;
-  INT64                               LastDispatchedInstall;
-  INT64                               LastDispatchedNotify;
-  UINT64                              PpiCount;
-//PEI_CORE_PPI_STRUCTURE              Ppi[PpiCount];
+  UINT64                              PpiListCurrentCount;
+  UINT64                              PpiListMaxCount;
+  UINT64                              PpiListLastDispatchedCount;
+  UINT64                              CallbackNotifyListCurrentCount;
+  UINT64                              CallbackNotifyListMaxCount;
+  UINT64                              DispatchNotifyListCurrentCount;
+  UINT64                              DispatchNotifyListMaxCount;
+  UINT64                              DispatchNotifyListLastDispatchedCount;
+//PEI_PPI_LIST_POINTERS               PpiListPpiPtrs[];
+//PEI_PPI_LIST_POINTERS               CallbackNotifyListNotifyPtrs[];
+//PEI_PPI_LIST_POINTERS               DispatchNotifyListNotifyPtrs[];
 } PEI_CORE_PPI_DATABASE_STRUCTURE;
 
 #define PEI_CORE_MEMORY_INFO_SIGNATURE SIGNATURE_32 ('P','C','M','I')

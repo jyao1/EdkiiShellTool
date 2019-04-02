@@ -327,6 +327,23 @@ GetDriverNameString(
   return NameString;
 }
 
+UINTN
+CalcTotalPeimCount (
+  IN VOID   *PrivateData
+  )
+{
+  UINTN               TotalPeimCount;
+  UINTN               FvIndex;
+  PEI_CORE_FV_HANDLE  *Fv;
+
+  TotalPeimCount = 0;
+  Fv = ((PEI_CORE_INSTANCE *)PrivateData)->Fv;
+  for (FvIndex = 0; FvIndex < ((PEI_CORE_INSTANCE *)PrivateData)->FvCount; FvIndex++) {
+    TotalPeimCount += Fv[FvIndex].PeimCount;
+  }
+  return TotalPeimCount;
+}
+
 VOID
 DumpImageData(
   IN PEI_CORE_INSTANCE   *PrivateData
@@ -342,10 +359,15 @@ DumpImageData(
   EFI_GUID            Guid;
   UINTN               ImageBase;
   CHAR16              *NameString;
+  UINTN               TotalPeimCount;
 
   PeiServices = &PrivateData->Ps;
 
-  mImageStructCountMax = PrivateData->FvCount * PcdGet32(PcdPeiCoreMaxPeimPerFv);
+  DEBUG((EFI_D_INFO, "FvCount            - %d\n", PrivateData->FvCount));
+  TotalPeimCount = CalcTotalPeimCount (PrivateData);
+  DEBUG((EFI_D_INFO, "TotalPeimCount     - %d\n", TotalPeimCount));
+
+  mImageStructCountMax = TotalPeimCount;
   mImageStruct = AllocateZeroPool(mImageStructCountMax * sizeof(IMAGE_STRUCT));
   if (mImageStruct == NULL) {
     return;
@@ -360,9 +382,10 @@ DumpImageData(
       DEBUG((EFI_D_INFO, "  (%a-%a)", GuidToName(&VolumeInfo.FvName), GuidToName(&VolumeInfo.FvFormat)));
     }
     DEBUG((EFI_D_INFO, "\n"));
+    DEBUG((EFI_D_INFO, "FV[%d] PeimCount - %d\n", Fv[FvIndex].PeimCount));
 
     FvFileHandles = Fv[FvIndex].FvFileHandles;
-    for (PeimIndex = 0; PeimIndex < PcdGet32(PcdPeiCoreMaxPeimPerFv); PeimIndex++) {
+    for (PeimIndex = 0; PeimIndex < Fv[FvIndex].PeimCount; PeimIndex++) {
       if (FvFileHandles[PeimIndex] == NULL) {
         break;
       }
@@ -385,26 +408,16 @@ DumpImageData(
 }
 
 VOID
-DumpPpiData(
-  IN PEI_PPI_DATABASE  *PpiData
+DumpPpiPtrs (
+  IN PEI_PPI_LIST_POINTERS       *PpiListPtrs,
+  IN UINTN                       CurrentCount
   )
 {
-  INTN                        Index;
-  PEI_PPI_LIST_POINTERS       *PpiListPtrs;
+  UINTN                       Index;
   EFI_PEI_PPI_DESCRIPTOR      *Ppi;
   EFI_PEI_NOTIFY_DESCRIPTOR   *Notify;
 
-  DEBUG((EFI_D_INFO, "PpiListEnd            - %d\n", PpiData->PpiListEnd));
-  DEBUG((EFI_D_INFO, "NotifyListEnd         - %d\n", PpiData->NotifyListEnd));
-  DEBUG((EFI_D_INFO, "DispatchListEnd       - %d\n", PpiData->DispatchListEnd));
-  DEBUG((EFI_D_INFO, "LastDispatchedInstall - %d\n", PpiData->NotifyListEnd));
-  DEBUG((EFI_D_INFO, "LastDispatchedNotify  - %d\n", PpiData->NotifyListEnd));
-  DEBUG((EFI_D_INFO, "PpiListPtrs           - %d\n", PpiData->PpiListPtrs));
-
-  PpiListPtrs = PpiData->PpiListPtrs;
-  for (Index = 0;
-       Index < (INTN)PcdGet32(PcdPeiCoreMaxPpiSupported);
-       Index++) {
+  for (Index = 0; Index < CurrentCount; Index++) {
     if (PpiListPtrs[Index].Ppi == NULL) {
       continue;
     }
@@ -433,6 +446,49 @@ DumpPpiData(
       DEBUG((EFI_D_INFO, "\n"));
     }
   }
+}
+
+UINTN
+CalcTotalPpiDataCount (
+  IN VOID   *PrivateData
+  )
+{
+  PEI_PPI_DATABASE    *PpiData;
+  UINTN               TotalPpiDataCount;
+
+  PpiData = &(((PEI_CORE_INSTANCE *)PrivateData)->PpiData);
+  TotalPpiDataCount = PpiData->PpiList.CurrentCount +
+                      PpiData->CallbackNotifyList.CurrentCount +
+                      PpiData->DispatchNotifyList.CurrentCount;
+  return TotalPpiDataCount;
+}
+
+VOID
+DumpPpiData(
+  IN PEI_PPI_DATABASE  *PpiData
+  )
+{
+  DEBUG((EFI_D_INFO, "PpiList                                - 0x%x\n", &PpiData->PpiList));
+  DEBUG((EFI_D_INFO, "PpiList.CurrentCount                   - %d\n", PpiData->PpiList.CurrentCount));
+  DEBUG((EFI_D_INFO, "PpiList.MaxCount                       - %d\n", PpiData->PpiList.MaxCount));
+  DEBUG((EFI_D_INFO, "PpiList.LastDispatchedCount            - %d\n", PpiData->PpiList.LastDispatchedCount));
+  DEBUG((EFI_D_INFO, "PpiList.PpiPtrs                        - 0x%x\n", PpiData->PpiList.PpiPtrs));
+  DEBUG((EFI_D_INFO, "CallbackNotifyList                     - 0x%x\n", &PpiData->CallbackNotifyList));
+  DEBUG((EFI_D_INFO, "CallbackNotifyList.CurrentCount        - %d\n", PpiData->CallbackNotifyList.CurrentCount));
+  DEBUG((EFI_D_INFO, "CallbackNotifyList.MaxCount            - %d\n", PpiData->CallbackNotifyList.MaxCount));
+  DEBUG((EFI_D_INFO, "CallbackNotifyList.NotifyPtrs          - 0x%x\n", PpiData->CallbackNotifyList.NotifyPtrs));
+  DEBUG((EFI_D_INFO, "DispatchNotifyList                     - 0x%x\n", &PpiData->DispatchNotifyList));
+  DEBUG((EFI_D_INFO, "DispatchNotifyList.CurrentCount        - %d\n", PpiData->DispatchNotifyList.CurrentCount));
+  DEBUG((EFI_D_INFO, "DispatchNotifyList.MaxCount            - %d\n", PpiData->DispatchNotifyList.MaxCount));
+  DEBUG((EFI_D_INFO, "DispatchNotifyList.LastDispatchedCount - %d\n", PpiData->DispatchNotifyList.LastDispatchedCount));
+  DEBUG((EFI_D_INFO, "DispatchNotifyList.NotifyPtrs          - 0x%x\n", PpiData->DispatchNotifyList.NotifyPtrs));
+
+  DEBUG((EFI_D_INFO, "PpiList.PpiPtrs :\n"));
+  DumpPpiPtrs (PpiData->PpiList.PpiPtrs, PpiData->PpiList.CurrentCount);
+  DEBUG((EFI_D_INFO, "CallbackNotifyList.NotifyPtrs :\n"));
+  DumpPpiPtrs (PpiData->CallbackNotifyList.NotifyPtrs, PpiData->CallbackNotifyList.CurrentCount);
+  DEBUG((EFI_D_INFO, "DispatchNotifyList.NotifyPtrs :\n"));
+  DumpPpiPtrs (PpiData->DispatchNotifyList.NotifyPtrs, PpiData->DispatchNotifyList.CurrentCount);
 }
 
 EFI_STATUS
