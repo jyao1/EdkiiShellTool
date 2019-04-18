@@ -119,6 +119,8 @@
   EdkiiShellToolPkg/AtaInfo/AtaInfo.inf
   EdkiiShellToolPkg/ScsiInfo/ScsiInfo.inf
 
+  EdkiiShellToolPkg/PatchMicrocode/PatchMicrocode.inf
+
 [BuildOptions]
   MSVC:DEBUG_*_*_DLINK_FLAGS = /EXPORT:InitializeDriver=$(IMAGE_ENTRY_POINT) /BASE:0x10000 /ALIGN:4096 /FILEALIGN:4096 /SUBSYSTEM:CONSOLE
   MSVC:NOOPT_*_*_DLINK_FLAGS = /EXPORT:InitializeDriver=$(IMAGE_ENTRY_POINT) /BASE:0x10000 /ALIGN:4096 /FILEALIGN:4096 /SUBSYSTEM:CONSOLE
