@@ -221,6 +221,28 @@ DumpCpuid (
 }
 
 VOID
+DumpDebugInterface (
+  VOID
+  )
+{
+  MSR_IA32_DEBUG_INTERFACE_REGISTER  Msr;
+  CPUID_VERSION_INFO_ECX             Ecx;
+
+  AsmCpuid (CPUID_VERSION_INFO, NULL, NULL, &Ecx.Uint32, NULL);
+
+  if (Ecx.Bits.SDBG == 0) {
+    Print (L"MSR_IA32_DEBUG_INTERFACE_REGISTER - unsupported\n");
+    return ;
+  }
+
+  Msr.Uint64 = AsmReadMsr64 (MSR_IA32_DEBUG_INTERFACE);
+  Print (L"MSR_IA32_DEBUG_INTERFACE_REGISTER - 0x%016lx\n", Msr.Uint64);
+  Print (L"  Enable        - 0x%x\n", Msr.Bits.Enable);
+  Print (L"  Lock          - 0x%x\n", Msr.Bits.Lock);
+  Print (L"  DebugOccurred - 0x%x\n", Msr.Bits.DebugOccurred);
+}
+
+VOID
 DumpPlatformId (
   VOID
   )
@@ -289,6 +311,7 @@ PatchMicrocodeEntrypoint (
   if (Argc == 2) {
     if (StrCmp (Argv[1], L"-D") == 0) {
       DumpCpuid ();
+      DumpDebugInterface ();
       DumpPlatformId ();
       DumpMicrocodeVersion ();
       return EFI_SUCCESS;
