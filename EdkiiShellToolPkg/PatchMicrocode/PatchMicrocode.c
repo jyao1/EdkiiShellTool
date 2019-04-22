@@ -261,6 +261,9 @@ DumpMicrocodeVersion (
 {
   MSR_IA32_BIOS_SIGN_ID_REGISTER  Msr;
 
+  Print (L"...Flash...\n");
+  AsmWriteMsr64 (MSR_IA32_BIOS_SIGN_ID, 0);
+  AsmCpuid (CPUID_VERSION_INFO, NULL, NULL, NULL, NULL);
   Msr.Uint64 = AsmReadMsr64 (MSR_IA32_BIOS_SIGN_ID);
   Print (L"MSR_IA32_BIOS_SIGN_ID - 0x%016lx\n", Msr.Uint64);
   Print (L"  MicrocodeUpdateSignature - 0x%08x\n", Msr.Bits.MicrocodeUpdateSignature);
