@@ -275,6 +275,77 @@ TriggerMicrocodeUpdate (
 }
 
 VOID
+DumpMicrocode (
+  IN VOID   *Buffer,
+  IN UINTN  BufferSize
+  )
+{
+  CPU_MICROCODE_HEADER                 *MicrocodeHeader;
+  CPU_MICROCODE_EXTENDED_TABLE_HEADER  *MicrocodeExtendedTableHeader;
+  CPU_MICROCODE_EXTENDED_TABLE         *MicrocodeExtendedTable;
+  UINTN                                ExtendedTableLength;
+  UINTN                                Index;
+  UINTN                                TotalSize;
+  UINT32                               InCompleteCheckSum32;
+  UINT32                               CheckSum32;
+
+  MicrocodeHeader = Buffer;
+  Print (L"CPU_MICROCODE_HEADER\n");
+  Print (L"  HeaderVersion          - 0x%08x\n", MicrocodeHeader->HeaderVersion);
+  Print (L"  UpdateRevision         - 0x%08x\n", MicrocodeHeader->UpdateRevision);
+  Print (L"  Date                   - 0x%08x\n", MicrocodeHeader->Date.Uint32);
+  Print (L"  ProcessorSignature     - 0x%08x\n", MicrocodeHeader->ProcessorSignature.Uint32);
+  Print (L"  Checksum               - 0x%08x\n", MicrocodeHeader->Checksum);
+  Print (L"  LoaderRevision         - 0x%08x\n", MicrocodeHeader->LoaderRevision);
+  Print (L"  ProcessorFlags         - 0x%08x\n", MicrocodeHeader->ProcessorFlags);
+  Print (L"  DataSize               - 0x%08x\n", MicrocodeHeader->DataSize);
+  Print (L"  TotalSize              - 0x%08x\n", MicrocodeHeader->TotalSize);
+
+  if (MicrocodeHeader->DataSize == 0) {
+    TotalSize = sizeof (CPU_MICROCODE_HEADER) + 2000;
+  } else {
+    TotalSize = sizeof (CPU_MICROCODE_HEADER) + MicrocodeHeader->DataSize;
+  }
+  InCompleteCheckSum32 = CalculateSum32 ((UINT32 *)MicrocodeHeader, TotalSize);
+  InCompleteCheckSum32 -= MicrocodeHeader->ProcessorSignature.Uint32;
+  InCompleteCheckSum32 -= MicrocodeHeader->ProcessorFlags;
+  InCompleteCheckSum32 -= MicrocodeHeader->Checksum;
+  CheckSum32 = InCompleteCheckSum32;
+  CheckSum32 += MicrocodeHeader->ProcessorSignature.Uint32;
+  CheckSum32 += MicrocodeHeader->ProcessorFlags;
+  CheckSum32 += MicrocodeHeader->Checksum;
+  Print (L"CheckSum32               - 0x%08x\n", CheckSum32);
+
+  if (MicrocodeHeader->DataSize == 0) {
+    return ;
+  }
+  ExtendedTableLength = MicrocodeHeader->TotalSize - (MicrocodeHeader->DataSize + sizeof (CPU_MICROCODE_HEADER));
+  if (ExtendedTableLength == 0) {
+    return ;
+  }
+  MicrocodeExtendedTableHeader = (CPU_MICROCODE_EXTENDED_TABLE_HEADER *)((UINTN)MicrocodeHeader +
+                                 MicrocodeHeader->DataSize + sizeof (CPU_MICROCODE_HEADER));
+  Print (L"CPU_MICROCODE_EXTENDED_TABLE_HEADER\n");
+  Print (L"  ExtendedSignatureCount - 0x%08x\n", MicrocodeExtendedTableHeader->ExtendedSignatureCount);
+  Print (L"  ExtendedChecksum       - 0x%08x\n", MicrocodeExtendedTableHeader->ExtendedChecksum);
+  CheckSum32 = CalculateSum32 ((UINT32 *) MicrocodeExtendedTableHeader, ExtendedTableLength);
+  Print (L"CheckSum32               - 0x%08x\n", CheckSum32);
+
+  MicrocodeExtendedTable = (CPU_MICROCODE_EXTENDED_TABLE *)(MicrocodeExtendedTableHeader + 1);
+  for (Index = 0; Index < MicrocodeExtendedTableHeader->ExtendedSignatureCount; Index ++) {
+    Print (L"CPU_MICROCODE_EXTENDED_TABLE[%d]\n", Index);
+    Print (L"  ProcessorSignature     - 0x%08x\n", MicrocodeExtendedTable[Index].ProcessorSignature.Uint32);
+    Print (L"  ProcessorFlag          - 0x%08x\n", MicrocodeExtendedTable[Index].ProcessorFlag);
+    Print (L"  Checksum               - 0x%08x\n", MicrocodeExtendedTable[Index].Checksum);
+    CheckSum32 = InCompleteCheckSum32;
+    CheckSum32 += MicrocodeExtendedTable[Index].ProcessorSignature.Uint32;
+    CheckSum32 += MicrocodeExtendedTable[Index].ProcessorFlag;
+    CheckSum32 += MicrocodeExtendedTable[Index].Checksum;
+    Print (L"CheckSum32               - 0x%08x\n", CheckSum32);
+  }
+}
+
+VOID
 PrintHelp (
   VOID
   )
@@ -321,8 +392,12 @@ PatchMicrocodeEntrypoint (
   if (Argc == 3) {
     if (StrCmp (Argv[1], L"-P") == 0) {
       GetImageFromFile (Argv[2], &ImageBuffer, &FileSize);
-      InternalDumpHex (ImageBuffer, 0x100);
       TriggerMicrocodeUpdate (ImageBuffer);
+      return EFI_SUCCESS;
+    }
+    if (StrCmp (Argv[1], L"-D") == 0) {
+      GetImageFromFile (Argv[2], &ImageBuffer, &FileSize);
+      DumpMicrocode (ImageBuffer, FileSize);
       return EFI_SUCCESS;
     }
   }
