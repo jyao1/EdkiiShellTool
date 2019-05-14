@@ -210,64 +210,173 @@ InternalDumpHex (
   }
 }
 
+typedef struct {
+  UINT32                             CpuId;
+  MSR_IA32_PLATFORM_ID_REGISTER      PlatformId;
+  BOOLEAN                            DebugInterfaceSupport;
+  MSR_IA32_DEBUG_INTERFACE_REGISTER  DebugInterface;
+  MSR_IA32_BIOS_SIGN_ID_REGISTER     MicrocodeVersion;
+} CPU_INFO;
+
 VOID
-DumpCpuid (
-  VOID
+GetCpuid (
+  OUT CPU_INFO *CpuInfo
   )
 {
-  UINT32  Eax;
-
-  AsmCpuid (CPUID_VERSION_INFO, &Eax, NULL, NULL, NULL);
-  Print (L"CPUID[1].EAX - 0x%08x\n", Eax);
+  AsmCpuid (CPUID_VERSION_INFO, &CpuInfo->CpuId, NULL, NULL, NULL);
 }
 
 VOID
-DumpDebugInterface (
-  VOID
+DumpCpuid (
+  IN CPU_INFO *CpuInfo
   )
 {
-  MSR_IA32_DEBUG_INTERFACE_REGISTER  Msr;
+  Print (L"CPUID[1].EAX - 0x%08x\n", CpuInfo->CpuId);
+}
+
+VOID
+GetDebugInterface (
+  OUT CPU_INFO *CpuInfo
+  )
+{
   CPUID_VERSION_INFO_ECX             Ecx;
 
   AsmCpuid (CPUID_VERSION_INFO, NULL, NULL, &Ecx.Uint32, NULL);
 
   if (Ecx.Bits.SDBG == 0) {
+    CpuInfo->DebugInterfaceSupport = FALSE;
+    CpuInfo->DebugInterface.Uint64 = 0;
+    return ;
+  }
+  CpuInfo->DebugInterfaceSupport = TRUE;
+  CpuInfo->DebugInterface.Uint64 = AsmReadMsr64 (MSR_IA32_DEBUG_INTERFACE);
+}
+
+VOID
+DumpDebugInterface (
+  IN CPU_INFO *CpuInfo
+  )
+{
+  if (!CpuInfo->DebugInterfaceSupport) {
     Print (L"MSR_IA32_DEBUG_INTERFACE_REGISTER - unsupported\n");
     return ;
   }
 
-  Msr.Uint64 = AsmReadMsr64 (MSR_IA32_DEBUG_INTERFACE);
-  Print (L"MSR_IA32_DEBUG_INTERFACE_REGISTER - 0x%016lx\n", Msr.Uint64);
-  Print (L"  Enable        - 0x%x\n", Msr.Bits.Enable);
-  Print (L"  Lock          - 0x%x\n", Msr.Bits.Lock);
-  Print (L"  DebugOccurred - 0x%x\n", Msr.Bits.DebugOccurred);
+  Print (L"MSR_IA32_DEBUG_INTERFACE_REGISTER - 0x%016lx\n", CpuInfo->DebugInterface.Uint64);
+  Print (L"  Enable        - 0x%x\n", CpuInfo->DebugInterface.Bits.Enable);
+  Print (L"  Lock          - 0x%x\n", CpuInfo->DebugInterface.Bits.Lock);
+  Print (L"  DebugOccurred - 0x%x\n", CpuInfo->DebugInterface.Bits.DebugOccurred);
 }
 
 VOID
-DumpPlatformId (
-  VOID
+GetPlatformId (
+  OUT CPU_INFO *CpuInfo
   )
 {
-  MSR_IA32_PLATFORM_ID_REGISTER  Msr;
+  CpuInfo->PlatformId.Uint64 = AsmReadMsr64 (MSR_IA32_PLATFORM_ID);
+}
+  
+VOID
+DumpPlatformId (
+  IN CPU_INFO *CpuInfo
+  )
+{
+  Print (L"MSR_IA32_PLATFORM_ID - 0x%016lx\n", CpuInfo->PlatformId.Uint64);
+  Print (L"  PlatformId - 0x%x\n", CpuInfo->PlatformId.Bits.PlatformId);
+}
 
-  Msr.Uint64 = AsmReadMsr64 (MSR_IA32_PLATFORM_ID);
-  Print (L"MSR_IA32_PLATFORM_ID - 0x%016lx\n", Msr.Uint64);
-  Print (L"  PlatformId - 0x%x\n", Msr.Bits.PlatformId);
+VOID
+GetMicrocodeVersion (
+  OUT CPU_INFO *CpuInfo
+  )
+{
+  AsmWriteMsr64 (MSR_IA32_BIOS_SIGN_ID, 0);
+  AsmCpuid (CPUID_VERSION_INFO, NULL, NULL, NULL, NULL);
+  CpuInfo->MicrocodeVersion.Uint64 = AsmReadMsr64 (MSR_IA32_BIOS_SIGN_ID);
 }
 
 VOID
 DumpMicrocodeVersion (
+  IN CPU_INFO *CpuInfo
+  )
+{
+  Print (L"MSR_IA32_BIOS_SIGN_ID - 0x%016lx\n", CpuInfo->MicrocodeVersion.Uint64);
+  Print (L"  MicrocodeUpdateSignature - 0x%08x\n", CpuInfo->MicrocodeVersion.Bits.MicrocodeUpdateSignature);
+}
+
+VOID
+EFIAPI
+GetCpuInfoForThis (
+  IN OUT VOID *Context
+  )
+{
+  CPU_INFO                   *CpuInfo;
+
+  CpuInfo = Context;
+  GetCpuid (CpuInfo);
+  GetDebugInterface (CpuInfo);
+  GetPlatformId (CpuInfo);
+  GetMicrocodeVersion (CpuInfo);
+}
+
+VOID
+DumpCpuInfoForThis (
+  IN CPU_INFO  *CpuInfo
+  )
+{
+  DumpCpuid (CpuInfo);
+  DumpDebugInterface (CpuInfo);
+  DumpPlatformId (CpuInfo);
+  DumpMicrocodeVersion (CpuInfo);
+}
+
+VOID
+DumpCpuInfo (
   VOID
   )
 {
-  MSR_IA32_BIOS_SIGN_ID_REGISTER  Msr;
+  EFI_MP_SERVICES_PROTOCOL   *MpServices;
+  UINTN                      NumberOfEnabledProcessors;
+  UINTN                      NumberOfCpus;
+  UINTN                      BspIndex;
+  UINTN                      CpuIndex;
+  EFI_STATUS                 Status;
+  CPU_INFO                   CpuInfo;
 
-  Print (L"...Flash...\n");
-  AsmWriteMsr64 (MSR_IA32_BIOS_SIGN_ID, 0);
-  AsmCpuid (CPUID_VERSION_INFO, NULL, NULL, NULL, NULL);
-  Msr.Uint64 = AsmReadMsr64 (MSR_IA32_BIOS_SIGN_ID);
-  Print (L"MSR_IA32_BIOS_SIGN_ID - 0x%016lx\n", Msr.Uint64);
-  Print (L"  MicrocodeUpdateSignature - 0x%08x\n", Msr.Bits.MicrocodeUpdateSignature);
+  NumberOfCpus = 1;
+  BspIndex = 0;
+  MpServices = NULL;
+
+  Status = gBS->LocateProtocol (&gEfiMpServiceProtocolGuid, NULL, (VOID **)&MpServices);
+  if (!EFI_ERROR (Status)) {
+    Status = MpServices->GetNumberOfProcessors (MpServices, &NumberOfCpus, &NumberOfEnabledProcessors);
+    ASSERT_EFI_ERROR (Status);
+    Status = MpServices->WhoAmI(MpServices, &BspIndex);
+    ASSERT_EFI_ERROR (Status);
+  }
+
+
+  for (CpuIndex = 0; CpuIndex < NumberOfCpus; CpuIndex++) {
+    ZeroMem (&CpuInfo, sizeof(CpuInfo));
+    Print (L"Get CPU Info (%d) ...\n", CpuIndex);
+    if (CpuIndex == BspIndex) {
+      GetCpuInfoForThis (&CpuInfo);
+    } else {
+      ASSERT (MpServices != NULL);
+      Status = MpServices->StartupThisAP (
+                             MpServices,
+                             GetCpuInfoForThis,
+                             CpuIndex,
+                             NULL, // WaitEvent
+                             0, // TimeoutInMicroseconds
+                             &CpuInfo,
+                             NULL // Finished
+                             );
+    }
+
+    Print (L"Dump CPU Info (%d) ...\n", CpuIndex);
+    DumpCpuInfoForThis (&CpuInfo);
+  }
 }
 
 VOID
@@ -429,10 +538,7 @@ PatchMicrocodeEntrypoint (
 
   if (Argc == 2) {
     if (StrCmp (Argv[1], L"-D") == 0) {
-      DumpCpuid ();
-      DumpDebugInterface ();
-      DumpPlatformId ();
-      DumpMicrocodeVersion ();
+      DumpCpuInfo ();
       return EFI_SUCCESS;
     }
   }
