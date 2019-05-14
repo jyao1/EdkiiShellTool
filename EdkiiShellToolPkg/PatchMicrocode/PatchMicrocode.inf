@@ -43,3 +43,4 @@
   gEfiSimpleFileSystemProtocolGuid
   gEfiShellParametersProtocolGuid
   gEfiLoadedImageProtocolGuid
+  gEfiMpServiceProtocolGuid

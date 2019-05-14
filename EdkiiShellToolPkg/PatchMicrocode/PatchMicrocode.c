@@ -20,6 +20,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/DebugLib.h>
 #include <Protocol/ShellParameters.h>
 #include <Protocol/LoadedImage.h>
+#include <Protocol/MpService.h>
 #include <Register/Cpuid.h>
 #include <Register/Msr.h>
 #include <Register/Microcode.h>
@@ -270,11 +271,55 @@ DumpMicrocodeVersion (
 }
 
 VOID
+EFIAPI
+TriggerMicrocodeUpdateForThis (
+  IN VOID *Context
+  )
+{
+  AsmWriteMsr64 (MSR_IA32_BIOS_UPDT_TRIG, (UINTN)Context + sizeof(CPU_MICROCODE_HEADER));
+}
+
+VOID
 TriggerMicrocodeUpdate (
   IN VOID *Buffer
   )
 {
-  AsmWriteMsr64 (MSR_IA32_BIOS_UPDT_TRIG, (UINTN)Buffer + sizeof(CPU_MICROCODE_HEADER));
+  EFI_MP_SERVICES_PROTOCOL   *MpServices;
+  UINTN                      NumberOfEnabledProcessors;
+  UINTN                      NumberOfCpus;
+  UINTN                      BspIndex;
+  UINTN                      CpuIndex;
+  EFI_STATUS                 Status;
+
+  NumberOfCpus = 1;
+  BspIndex = 0;
+  MpServices = NULL;
+
+  Status = gBS->LocateProtocol (&gEfiMpServiceProtocolGuid, NULL, (VOID **)&MpServices);
+  if (!EFI_ERROR (Status)) {
+    Status = MpServices->GetNumberOfProcessors (MpServices, &NumberOfCpus, &NumberOfEnabledProcessors);
+    ASSERT_EFI_ERROR (Status);
+    Status = MpServices->WhoAmI(MpServices, &BspIndex);
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  for (CpuIndex = 0; CpuIndex < NumberOfCpus; CpuIndex++) {
+    Print (L"Patch CPU (%d) ...\n", CpuIndex);
+    if (CpuIndex == BspIndex) {
+      TriggerMicrocodeUpdateForThis (Buffer);
+    } else {
+      ASSERT (MpServices != NULL);
+      Status = MpServices->StartupThisAP (
+                             MpServices,
+                             TriggerMicrocodeUpdateForThis,
+                             CpuIndex,
+                             NULL, // WaitEvent
+                             0, // TimeoutInMicroseconds
+                             Buffer,
+                             NULL // Finished
+                             );
+    }
+  }
 }
 
 VOID
