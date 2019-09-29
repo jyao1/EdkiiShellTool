@@ -26,6 +26,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/ShellLib.h>
 #include <Library/UefiLib.h>
 #include <Library/BaseCryptLib.h>
+#include <IndustryStandard/Acpi.h>
+#include <IndustryStandard/Tpm2Acpi.h>
 
 #define EV_NO_ACTION                ((TCG_EVENTTYPE) 0x00000003)
 
@@ -86,6 +88,7 @@ SHELL_PARAM_ITEM mParamList[] = {
   {L"-L",   TypeValue},
   {L"-E",   TypeFlag},
   {L"-C",   TypeFlag},
+  {L"-A",   TypeFlag},
   {L"-?",   TypeFlag},
   {L"-h",   TypeFlag},
   {NULL,    TypeMax},
@@ -486,6 +489,7 @@ DumpEventLog (
   TPMU_HA                          HashDigest;
 
   Print (L"EventLogFormat: (0x%x)\n", EventLogFormat);
+  Print (L"EventLogLocation: (0x%lx)\n", EventLogLocation);
 
   if (!CalculateExpected) {
     Print (L"Tcg2Event:\n");
@@ -653,6 +657,302 @@ DumpTcg2Capability (
   return ;
 }
 
+#pragma pack(1)
+
+typedef struct {
+  EFI_ACPI_DESCRIPTION_HEADER Header;
+  // Flags field is replaced in version 4 and above
+  //    BIT0~15:  PlatformClass      This field is only valid for version 4 and above
+  //    BIT16~31: Reserved
+  UINT32                      Flags;
+  UINT64                      AddressOfControlArea;
+  UINT32                      StartMethod;
+  UINT8                       PlatformSpecificParameters[12];  // size up to 12
+  UINT32                      Laml;                          // Optional
+  UINT64                      Lasa;                          // Optional
+} EFI_TPM2_ACPI_TABLE_V4;
+
+#pragma pack()
+
+VOID
+DumpAcpiTableHeader (
+  EFI_ACPI_DESCRIPTION_HEADER                    *Header
+  )
+{
+  UINT8               *Signature;
+  UINT8               *OemTableId;
+  UINT8               *CreatorId;
+  
+  Print (
+    L"  Table Header:\n"
+    );
+  Signature = (UINT8*)&Header->Signature;
+  Print (
+    L"    Signature ............................................ '%c%c%c%c'\n",
+    Signature[0],
+    Signature[1],
+    Signature[2],
+    Signature[3]
+    );
+  Print (
+    L"    Length ............................................... 0x%08x\n",
+    Header->Length
+    );
+  Print (
+    L"    Revision ............................................. 0x%02x\n",
+    Header->Revision
+    );
+  Print (
+    L"    Checksum ............................................. 0x%02x\n",
+    Header->Checksum
+    );
+  Print (
+    L"    OEMID ................................................ '%c%c%c%c%c%c'\n",
+    Header->OemId[0],
+    Header->OemId[1],
+    Header->OemId[2],
+    Header->OemId[3],
+    Header->OemId[4],
+    Header->OemId[5]
+    );
+  OemTableId = (UINT8 *)&Header->OemTableId;
+  Print (
+    L"    OEM Table ID ......................................... '%c%c%c%c%c%c%c%c'\n",
+    OemTableId[0],
+    OemTableId[1],
+    OemTableId[2],
+    OemTableId[3],
+    OemTableId[4],
+    OemTableId[5],
+    OemTableId[6],
+    OemTableId[7]
+    );
+  Print (
+    L"    OEM Revision ......................................... 0x%08x\n",
+    Header->OemRevision
+    );
+  CreatorId = (UINT8 *)&Header->CreatorId;
+  Print (
+    L"    Creator ID ........................................... '%c%c%c%c'\n",
+    CreatorId[0],
+    CreatorId[1],
+    CreatorId[2],
+    CreatorId[3]
+    );
+  Print (
+    L"    Creator Revision ..................................... 0x%08x\n",
+    Header->CreatorRevision
+    );
+
+  return;
+}
+
+VOID
+EFIAPI
+DumpAcpiTPM2 (
+  VOID  *Table
+  )
+{
+  EFI_TPM2_ACPI_TABLE                            *Tpm2;
+  EFI_TPM2_ACPI_TABLE_V4                         *Tpm2V4;
+
+  Tpm2 = Table;
+  
+  //
+  // Dump Tpm2 table
+  //
+  Print (
+    L"*****************************************************************************\n"
+    L"*         Trusted Computing Platform 2 Table                                *\n"
+    L"*****************************************************************************\n"
+    );
+
+  Print (
+    L"TPM2 address ............................................. 0x%016lx\n",
+    (UINT64)(UINTN)Tpm2
+    );
+  
+  DumpAcpiTableHeader(&(Tpm2->Header));
+  
+  Print (
+    L"  Table Contents:\n"
+    );
+  Print (
+    L"    Flags ................................................ 0x%08x\n",
+    ((EFI_TPM2_ACPI_TABLE *)Tpm2)->Flags
+    );
+  Print (
+    L"    Address Of Control Area .............................. 0x%016lx\n",
+    Tpm2->AddressOfControlArea
+    );
+  Print (
+    L"    Start Method ......................................... 0x%08x\n",
+    Tpm2->StartMethod
+    );
+  switch (Tpm2->StartMethod) {
+  case EFI_TPM2_ACPI_TABLE_START_METHOD_ACPI:
+    Print (
+      L"      ACPI\n"
+      );
+    break;
+  case EFI_TPM2_ACPI_TABLE_START_METHOD_TIS:
+    Print (
+      L"      TIS\n"
+      );
+    break;
+  case EFI_TPM2_ACPI_TABLE_START_METHOD_COMMAND_RESPONSE_BUFFER_INTERFACE:
+    Print (
+      L"      CRB\n"
+      );
+    break;
+  case EFI_TPM2_ACPI_TABLE_START_METHOD_COMMAND_RESPONSE_BUFFER_INTERFACE_WITH_ACPI:
+    Print (
+      L"      CRB with ACPI\n"
+      );
+    break;
+  }
+
+  if (Tpm2->Header.Revision >= 4 && Tpm2->Header.Length >= sizeof(EFI_TPM2_ACPI_TABLE_V4)) {
+    Tpm2V4 = (EFI_TPM2_ACPI_TABLE_V4 *)Tpm2;
+    Print (
+      L"    Laml ................................................. 0x%08x\n",
+      Tpm2V4->Laml
+      );
+    Print (
+      L"    Lasa ................................................. 0x%016lx\n",
+      Tpm2V4->Lasa
+      );
+  }
+
+  Print (         
+    L"*****************************************************************************\n\n"
+    );
+  
+  return;
+}
+
+VOID
+DumpSelectAcpiTable (
+  EFI_ACPI_DESCRIPTION_HEADER                    *Table
+  )
+{
+  if (Table->Signature == EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_2_TABLE_SIGNATURE) {
+    DumpAcpiTPM2 (Table);
+  }
+}
+
+EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER *
+ScanAcpiRSDP (
+  VOID
+  )
+{
+  UINTN                                                       Index;
+  EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER                *Rsdp;
+  
+  Rsdp = NULL;
+  for (Index = 0; Index < gST->NumberOfTableEntries; Index ++) {
+    if (CompareGuid (&gEfiAcpiTableGuid, &(gST->ConfigurationTable[Index].VendorGuid))) {
+      Rsdp = gST->ConfigurationTable[Index].VendorTable;
+      break;
+    }
+  }
+
+  return Rsdp;
+}
+
+EFI_ACPI_DESCRIPTION_HEADER *
+ScanAcpiRSDT (
+  IN EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER *Rsdp
+  )
+{
+  return (EFI_ACPI_DESCRIPTION_HEADER*)((UINTN)Rsdp->RsdtAddress);    
+}
+
+EFI_ACPI_DESCRIPTION_HEADER *
+ScanAcpiXSDT (
+  IN EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER *Rsdp
+  )
+{
+  return (EFI_ACPI_DESCRIPTION_HEADER*)((UINTN)Rsdp->XsdtAddress);    
+}
+
+VOID
+DumpAcpiTableWithSign (
+  UINT32                                TableSign
+  )
+{
+  EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER   *Rsdp;
+  EFI_ACPI_DESCRIPTION_HEADER                    *Rsdt;
+  EFI_ACPI_DESCRIPTION_HEADER                    *Xsdt;
+  EFI_ACPI_DESCRIPTION_HEADER                    *Table;
+  UINTN                                          EntryCount;
+  UINTN                                          Index;
+  UINT32                                         *RsdtEntryPtr;
+  UINT64                                         *XsdtEntryPtr;
+  UINT64                                         TempEntry;
+
+  //
+  // Scan RSDP
+  //
+  Rsdp = ScanAcpiRSDP ();
+  if (Rsdp == NULL) {
+    return;
+  }
+  Print (L"Rsdp - 0x%x\n", Rsdp);
+
+  //
+  // Scan RSDT
+  //
+  Rsdt = ScanAcpiRSDT (Rsdp);
+  Print (L"Rsdt - 0x%x\n", Rsdt);
+  
+  //
+  // Scan XSDT
+  //
+  Xsdt = ScanAcpiXSDT (Rsdp);
+  Print (L"Xsdt - 0x%x\n", Xsdt);
+ 
+  //
+  // Dump each table in RSDT
+  //
+  if ((Xsdt == NULL) && (Rsdt != NULL)) {
+    EntryCount = (Rsdt->Length - sizeof (EFI_ACPI_DESCRIPTION_HEADER)) / 4;
+    RsdtEntryPtr = (UINT32* )(UINTN)(Rsdt + 1);
+    for (Index = 0; Index < EntryCount; Index ++, RsdtEntryPtr ++) {
+      Table = (EFI_ACPI_DESCRIPTION_HEADER *)((UINTN)(*RsdtEntryPtr));
+      if (Table == NULL) {
+        continue;
+      }
+      Print (L"Table - 0x%x (0x%x)\n", Table, Table->Signature);
+      if (Table->Signature == TableSign) {
+        DumpSelectAcpiTable (Table);
+      }
+    }
+  }
+  
+  //
+  // Dump each table in XSDT
+  //
+  if (Xsdt != NULL) {
+    EntryCount = (Xsdt->Length - sizeof (EFI_ACPI_DESCRIPTION_HEADER)) / 8;
+    XsdtEntryPtr = (UINT64 *)(UINTN)(Xsdt + 1);
+    CopyMem(&TempEntry, XsdtEntryPtr, sizeof(UINT64));
+    for (Index = 0; Index < EntryCount; Index ++, XsdtEntryPtr ++) {
+      CopyMem(&TempEntry, XsdtEntryPtr, sizeof(UINT64));
+      Table = (EFI_ACPI_DESCRIPTION_HEADER *)((UINTN)TempEntry);
+      if (Table == NULL) {
+        continue;
+      }
+      Print (L"Table - 0x%x (0x%x)\n", Table, Table->Signature);
+      if (Table->Signature == TableSign) {
+        DumpSelectAcpiTable (Table);
+      }
+    }
+  }
+  
+  return;
+}
+
 /**
   This function print usage.
 **/
@@ -671,12 +971,14 @@ PrintUsage (
     L"\n"
     L"usage: Tcg2DumpLog [-I <PcrIndex>] [-L <LogFormat>] [-E]\n"
     L"usage: Tcg2DumpLog [-C]\n"
+    L"usage: Tcg2DumpLog [-A]\n"
     );
   Print (
     L"  -I   - PcrIndex, the valid value is 0-23|ALL (case sensitive)\n"
     L"  -L   - LogFormat, the bitmask of EventLogFormat (Hex based)\n"
     L"  -E   - Print expected PCR value\n"
     L"  -C   - Dump Tcg2 Capability\n"
+    L"  -A   - Dump TPM2 ACPI table\n"
     );
   return;
 }
@@ -722,6 +1024,14 @@ UefiMain (
      ShellCommandLineGetFlag(ParamPackage, L"-?") ||
      ShellCommandLineGetFlag(ParamPackage, L"-h")) {
     PrintUsage ();
+    return EFI_SUCCESS;
+  }
+
+  //
+  // Dump ACPI
+  //
+  if (ShellCommandLineGetFlag(ParamPackage, L"-A")) {
+    DumpAcpiTableWithSign (EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_2_TABLE_SIGNATURE);
     return EFI_SUCCESS;
   }
 

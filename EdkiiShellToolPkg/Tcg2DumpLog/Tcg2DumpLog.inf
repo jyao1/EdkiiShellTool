@@ -48,6 +48,9 @@
   ShellLib
   BaseCryptLib
 
+[Guids]
+  gEfiAcpiTableGuid
+
 [Protocols]
   gEfiTcg2ProtocolGuid                           ## CONSUMES
   gEfiTcg2FinalEventsTableGuid
