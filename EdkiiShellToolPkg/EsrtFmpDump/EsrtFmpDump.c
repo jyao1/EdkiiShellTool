@@ -427,8 +427,6 @@ GetCapsuleName(
     return "Windows UX Capsule";
   } else if (CompareGuid(&gEfiFmpCapsuleGuid, Guid)) {
     return "UEFI FMP Capsule";
-  } else if (CompareGuid(&gEfiCapsuleGuid, Guid)) {
-    return "Intel Framework Capsule (unknown format)";
   } else {
     Status = gBS->LocateProtocol(&gEsrtManagementProtocolGuid, NULL, (VOID **)&EsrtProtocol);
     if (!EFI_ERROR(Status)) {

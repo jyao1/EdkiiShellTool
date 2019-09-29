@@ -25,7 +25,6 @@
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
-  IntelFrameworkPkg/IntelFrameworkPkg.dec
 
 [LibraryClasses]
   UefiApplicationEntryPoint
@@ -43,7 +42,6 @@
   gEfiSystemResourceTableGuid
   gWindowsUxCapsuleGuid
   gEfiFmpCapsuleGuid
-  gEfiCapsuleGuid
 
 [Protocols]
   gEfiFirmwareManagementProtocolGuid
