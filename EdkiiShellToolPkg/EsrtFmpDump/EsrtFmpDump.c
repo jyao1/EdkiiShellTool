@@ -24,7 +24,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <Guid/SystemResourceTable.h>
 #include <Guid/FmpCapsule.h>
-#include <Guid/Capsule.h>
 
 #include <IndustryStandard/WindowsUxCapsule.h>
 
