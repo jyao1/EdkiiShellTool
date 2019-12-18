@@ -1,6 +1,6 @@
 /** @file
 
-Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials 
 are licensed and made available under the terms and conditions of the BSD License 
 which accompanies this distribution.  The full text of the license may be found at 
@@ -87,6 +87,7 @@ SHELL_PARAM_ITEM mParamList[] = {
   {L"-I",   TypeValue},
   {L"-L",   TypeValue},
   {L"-E",   TypeFlag},
+  {L"-BIN", TypeValue},
   {L"-C",   TypeFlag},
   {L"-A",   TypeFlag},
   {L"-?",   TypeFlag},
@@ -372,6 +373,14 @@ DumpEvent2 (
   Print (L"    EventSize - 0x%08x\n", EventSize);
   EventBuffer = DigestBuffer + sizeof(TcgPcrEvent2->EventSize);
   InternalDumpHex (EventBuffer, EventSize);
+}
+
+UINTN
+GetPcrEventSize (
+  IN TCG_PCR_EVENT         *TcgPcrEvent
+  )
+{
+  return sizeof(TCG_PCR_EVENT_HDR) + TcgPcrEvent->EventSize;
 }
 
 UINTN
@@ -962,14 +971,14 @@ PrintUsage (
   )
 {
   Print (
-    L"Tcg2DumpLog Version 0.1\n"
-    L"Copyright (C) Intel Corp 2015. All rights reserved.\n"
+    L"Tcg2DumpLog Version 0.2\n"
+    L"Copyright (C) Intel Corp 2019. All rights reserved.\n"
     L"\n"
     );
   Print (
     L"Tcg2DumpLog in EFI Shell Environment.\n"
     L"\n"
-    L"usage: Tcg2DumpLog [-I <PcrIndex>] [-L <LogFormat>] [-E]\n"
+    L"usage: Tcg2DumpLog [-I <PcrIndex>] [-L <LogFormat>] [-E] [-BIN <File>]\n"
     L"usage: Tcg2DumpLog [-C]\n"
     L"usage: Tcg2DumpLog [-A]\n"
     );
@@ -977,10 +986,101 @@ PrintUsage (
     L"  -I   - PcrIndex, the valid value is 0-23|ALL (case sensitive)\n"
     L"  -L   - LogFormat, the bitmask of EventLogFormat (Hex based)\n"
     L"  -E   - Print expected PCR value\n"
+    L"  -BIN - Dump Event Log binary file (Only support TCG2.0 Event Log Format)\n"
     L"  -C   - Dump Tcg2 Capability\n"
     L"  -A   - Dump TPM2 ACPI table\n"
     );
   return;
+}
+
+/**
+  Write a file.
+
+  @param[in] FileName        The file to be written.
+  @param[in] BufferSize      The file buffer size
+  @param[in] Buffer          The file buffer
+
+  @retval EFI_SUCCESS        Write file successfully
+  @retval EFI_NOT_FOUND      Shell protocol not found
+  @retval others             Write file failed
+**/
+EFI_STATUS
+WriteFileFromBuffer (
+  IN  CHAR16                        *FileName,
+  IN  UINTN                         BufferSize,
+  IN  VOID                          *Buffer
+  )
+{
+  EFI_STATUS                        Status;
+  EFI_SHELL_PROTOCOL                *ShellProtocol;
+  SHELL_FILE_HANDLE                 Handle;
+  EFI_FILE_INFO                     *FileInfo;
+  UINTN                             TempBufferSize;
+
+  Status = gBS->LocateProtocol(
+                  &gEfiShellProtocolGuid,
+                  NULL,
+                  (VOID **)&ShellProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //
+  // Open file by FileName.
+  //
+  Status = ShellProtocol->OpenFileByName (
+                            FileName,
+                            &Handle,
+                            EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_CREATE
+                            );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //
+  // Empty the file contents.
+  //
+  FileInfo = ShellProtocol->GetFileInfo (Handle);
+  if (FileInfo == NULL) {
+    ShellProtocol->CloseFile (Handle);
+    return EFI_DEVICE_ERROR;
+  }
+
+  //
+  // If the file size is already 0, then it has been empty.
+  //
+  if (FileInfo->FileSize != 0) {
+    //
+    // Set the file size to 0.
+    //
+    FileInfo->FileSize = 0;
+    Status = ShellProtocol->SetFileInfo (Handle, FileInfo);
+    if (EFI_ERROR (Status)) {
+      FreePool (FileInfo);
+      ShellProtocol->CloseFile (Handle);
+      return Status;
+    }
+  }
+  FreePool (FileInfo);
+
+  //
+  // Write the file data from the buffer
+  //
+  TempBufferSize = BufferSize;
+  Status = ShellProtocol->WriteFile (
+                            Handle,
+                            &TempBufferSize,
+                            Buffer
+                            );
+  if (EFI_ERROR (Status)) {
+    ShellProtocol->CloseFile (Handle);
+    return Status;
+  }
+
+  ShellProtocol->CloseFile (Handle);
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -1004,6 +1104,7 @@ UefiMain (
   CHAR16                           *PcrIndexName;
   UINT32                           PcrIndex;
   BOOLEAN                          CalculateExpected;
+  CHAR16                           *BinayFileName;
   EFI_TCG2_PROTOCOL                *Tcg2Protocol;
   EFI_PHYSICAL_ADDRESS             EventLogLocation;
   EFI_PHYSICAL_ADDRESS             EventLogLastEntry;
@@ -1013,6 +1114,9 @@ UefiMain (
   CHAR16                           *LogFormatName;
   EFI_TCG2_BOOT_SERVICE_CAPABILITY ProtocolCapability;
   EFI_TCG2_FINAL_EVENTS_TABLE      *FinalEventsTable;
+  UINTN                            LastPcrEventSize;
+  UINTN                            BufferSize;
+  UINT8                            *Buffer;
 
   Status = ShellCommandLineParse (mParamList, &ParamPackage, NULL, TRUE);
   if (EFI_ERROR(Status)) {
@@ -1052,6 +1156,7 @@ UefiMain (
       }
     }
   }
+  Print(L"Parameter -I: PcrIndex = 0x%x\n", PcrIndex);
   
   //
   // Get LogFormat
@@ -1062,11 +1167,19 @@ UefiMain (
   } else {
     LogFormat = (UINT32)StrHexToUintn (LogFormatName);
   }
+  Print(L"Parameter -L: LogFormat = 0x%x\n", LogFormat);
 
   //
   // If we need calculate expected value
   //
   CalculateExpected = ShellCommandLineGetFlag(ParamPackage, L"-E");
+  Print(L"Parameter -E: CalculateExpected = %d\n", CalculateExpected);
+
+  //
+  // Get BinayFileName
+  //
+  BinayFileName = (CHAR16 *)ShellCommandLineGetValue(ParamPackage, L"-BIN");
+  Print(L"Parameter -BIN: BinayFileName = %s\n", BinayFileName);
 
   //
   // Get Tcg2
@@ -1129,6 +1242,33 @@ UefiMain (
       FinalEventsTable = NULL;
       if (mTcg2EventInfo[Index].LogFormat == EFI_TCG2_EVENT_LOG_FORMAT_TCG_2) {
         EfiGetSystemConfigurationTable (&gEfiTcg2FinalEventsTableGuid, (VOID **)&FinalEventsTable);
+      }
+
+      //
+      // Dump Binary
+      //
+      if (BinayFileName != NULL) {
+        if (mTcg2EventInfo[Index].LogFormat == EFI_TCG2_EVENT_LOG_FORMAT_TCG_1_2) {
+          LastPcrEventSize = GetPcrEventSize((TCG_PCR_EVENT*)EventLogLastEntry);
+        } else if (mTcg2EventInfo[Index].LogFormat == EFI_TCG2_EVENT_LOG_FORMAT_TCG_2) {
+          LastPcrEventSize = GetPcrEvent2Size((TCG_PCR_EVENT2*)EventLogLastEntry);
+        }
+
+        BufferSize = EventLogLastEntry - EventLogLocation + LastPcrEventSize;
+        Buffer = (UINT8*)EventLogLocation;
+
+        Print(L"EventLogSize: 0x%lx\n", BufferSize);
+        Print(L"    EventLogLocation:  (0x%lx)\n", EventLogLocation);
+        Print(L"    EventLogLastEntry: (0x%lx)\n", EventLogLastEntry);
+        Print(L"    LastPcrEventSize:  (0x%lx)\n", LastPcrEventSize);
+
+        if (mTcg2EventInfo[Index].LogFormat == EFI_TCG2_EVENT_LOG_FORMAT_TCG_1_2) {
+          Print(L"Do NOT support to dump event log binary file in TCG1.2 format!\n");
+        } else if (mTcg2EventInfo[Index].LogFormat == EFI_TCG2_EVENT_LOG_FORMAT_TCG_2) {
+          Print(L"DumpEventLogBinFile Start ...\n");
+          Status = WriteFileFromBuffer(BinayFileName, BufferSize, Buffer);
+          Print(L"DumpEventLogBinFile End (Dump to %s %r)\n", BinayFileName, Status);
+        }
       }
 
       //
