@@ -26,8 +26,10 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/ShellLib.h>
 #include <Library/UefiLib.h>
 #include <Library/BaseCryptLib.h>
+#include <Library/DevicePathLib.h>
 #include <IndustryStandard/Acpi.h>
 #include <IndustryStandard/Tpm2Acpi.h>
+#include <IndustryStandard/Spdm.h>
 
 #define EV_NO_ACTION                ((TCG_EVENTTYPE) 0x00000003)
 
@@ -331,6 +333,217 @@ GetTcgEfiSpecIdEventStructSize (
 }
 
 VOID
+ParseEvent2Data (
+  IN TCG_PCR_EVENT2        *TcgPcrEvent2,
+  IN UINT8                 *EventBuffer,
+  IN UINTN                 EventSize
+  )
+{
+  UINTN                                         Index;
+
+  EFI_VARIABLE_DATA                             *EfiVariableData;
+  UINT8                                         *VariableData;
+  
+  EFI_IMAGE_LOAD_EVENT                          *EfiImageLoadEvent;
+
+  EFI_PLATFORM_FIRMWARE_BLOB                    *EfiPlatformFirmwareBlob;
+  EFI_HANDOFF_TABLE_POINTERS                    *EfiHandoffTablePointers;
+
+  TCG_DEVICE_SECURITY_EVENT_DATA_HEADER         *EventDataHeader;
+  SPDM_MEASUREMENT_BLOCK_COMMON_HEADER          *CommonHeader;
+  SPDM_MEASUREMENT_BLOCK_DMTF_HEADER            *DmtfHeader;
+  UINT8                                         *MeasurementBuffer;
+  TCG_DEVICE_SECURITY_EVENT_DATA_PCI_CONTEXT    *PciContext;
+
+  switch (TcgPcrEvent2->EventType) {
+  case EV_POST_CODE:
+    Print(L"    EventData - Type: EV_POST_CODE\n");
+    Print(L"      POST CODE - \"");
+
+    for (Index = 0; Index < EventSize; Index++) {
+      Print(L"%c", EventBuffer[Index]);
+    }
+    Print(L"\"\n");
+
+    break;
+
+  case EV_NO_ACTION:
+    Print(L"    EventData - Type: EV_NO_ACTION\n");
+    Print(L"      No ACTION - ");
+
+    for (Index = 0; Index < EventSize; Index++) {
+      Print(L"%02x ", EventBuffer[Index]);
+    }
+    Print(L"\n");
+
+    break;
+
+  case EV_SEPARATOR:
+    Print(L"    EventData - Type: EV_SEPARATOR\n");
+    Print(L"      SEPARATOR - 0x%08x\n", *(UINT32*)EventBuffer);
+
+    break;
+
+  case EV_S_CRTM_VERSION:
+    Print(L"    EventData - Type: EV_S_CRTM_VERSION\n");
+    Print(L"      CRTM VERSION - ");
+
+    for (Index = 0; Index < EventSize; Index++) {
+      Print(L"%02x ", EventBuffer[Index]);
+    }
+    Print(L"\n");
+
+    break;
+
+  case EV_EFI_VARIABLE_DRIVER_CONFIG:
+  case EV_EFI_VARIABLE_BOOT:
+    if (TcgPcrEvent2->EventType == EV_EFI_VARIABLE_DRIVER_CONFIG) {
+      Print(L"    EventData - Type: EV_EFI_VARIABLE_DRIVER_CONFIG\n");
+    } else if (TcgPcrEvent2->EventType == EV_EFI_VARIABLE_BOOT) {
+      Print(L"    EventData - Type: EV_EFI_VARIABLE_BOOT\n");
+    }
+
+    EfiVariableData = (EFI_VARIABLE_DATA*)EventBuffer;
+    Print(L"      VariableName       - %g\n", EfiVariableData->VariableName);
+    Print(L"      UnicodeNameLength  - 0x%016x\n", EfiVariableData->UnicodeNameLength);
+    Print(L"      VariableDataLength - 0x%016x\n", EfiVariableData->VariableDataLength);
+
+    Print(L"      UnicodeName        - ");
+    for (Index = 0; Index < EfiVariableData->UnicodeNameLength; Index++) {
+      Print(L"%c", EfiVariableData->UnicodeName[Index]);
+    }
+    Print(L"\n");
+
+    VariableData = (UINT8*)&EfiVariableData->UnicodeName[Index];
+    Print(L"      VariableData       - ");
+
+    for (Index = 0; Index < EfiVariableData->VariableDataLength; Index++) {
+      Print(L"%02x ", VariableData[Index]);
+
+      if ((Index + 1) % 0x10 == 0) {
+        Print(L"\n");
+        if (Index + 1 < EfiVariableData->VariableDataLength) {
+          Print(L"                           ");
+        }
+      }
+    }
+
+    if (EfiVariableData->VariableDataLength == 0 || EfiVariableData->VariableDataLength % 0x10 != 0) {
+      Print(L"\n");
+    }
+
+    break;
+
+  case EV_EFI_BOOT_SERVICES_APPLICATION:
+  case EV_EFI_BOOT_SERVICES_DRIVER:
+    if (TcgPcrEvent2->EventType == EV_EFI_BOOT_SERVICES_APPLICATION) {
+      Print(L"    EventData - Type: EV_EFI_BOOT_SERVICES_APPLICATION\n");
+    } else if (TcgPcrEvent2->EventType == EV_EFI_BOOT_SERVICES_DRIVER) {
+      Print(L"    EventData - Type: EV_EFI_BOOT_SERVICES_DRIVER\n");
+    }
+
+    EfiImageLoadEvent = (EFI_IMAGE_LOAD_EVENT*)EventBuffer;
+    Print(L"      ImageLocationInMemory - 0x%016x\n", EfiImageLoadEvent->ImageLocationInMemory);
+    Print(L"      ImageLengthInMemory   - 0x%016x\n", EfiImageLoadEvent->ImageLengthInMemory);
+    Print(L"      ImageLinkTimeAddress  - 0x%016x\n", EfiImageLoadEvent->ImageLinkTimeAddress);
+    Print(L"      LengthOfDevicePath    - 0x%016x\n", EfiImageLoadEvent->LengthOfDevicePath);
+    Print(L"      DevicePath:\n");
+    Print(L"        %s\n", ConvertDevicePathToText(EfiImageLoadEvent->DevicePath, FALSE, FALSE));
+
+    break;
+
+  case EV_EFI_ACTION:
+    Print(L"    EventData - Type: EV_EFI_ACTION\n");
+    Print(L"      Action String - \"");
+
+    for (Index = 0; Index < EventSize; Index++) {
+      Print(L"%c", EventBuffer[Index]);
+    }
+    Print(L"\"\n");
+
+    break;
+
+  case EV_EFI_PLATFORM_FIRMWARE_BLOB:
+    EfiPlatformFirmwareBlob = (EFI_PLATFORM_FIRMWARE_BLOB*)EventBuffer;
+    Print(L"    EventData - Type: EV_EFI_PLATFORM_FIRMWARE_BLOB\n");
+    Print(L"      BlobBase   - 0x%016x\n", EfiPlatformFirmwareBlob->BlobBase);
+    Print(L"      BlobLength - 0x%016x\n", EfiPlatformFirmwareBlob->BlobLength);
+
+    break;
+
+  case EV_EFI_HANDOFF_TABLES:
+    EfiHandoffTablePointers = (EFI_HANDOFF_TABLE_POINTERS*)EventBuffer;
+    Print(L"    EventData - Type: EV_EFI_HANDOFF_TABLES\n");
+    Print(L"      NumberOfTables - 0x%016x\n", EfiHandoffTablePointers->NumberOfTables);
+    for (Index = 0; Index < EfiHandoffTablePointers->NumberOfTables; Index++) {
+      Print(L"      TableEntry (%d):\n", Index);
+      Print(L"        VendorGuid  - %g\n", EfiHandoffTablePointers->TableEntry[Index].VendorGuid);
+      Print(L"        VendorTable - 0x%016x\n", EfiHandoffTablePointers->TableEntry[Index].VendorTable);
+    }
+
+    break;
+
+  case EV_EFI_SPDM_FIRMWARE_BLOB:
+    EventDataHeader = (TCG_DEVICE_SECURITY_EVENT_DATA_HEADER*)EventBuffer;
+    Print(L"    EventData - Type: EV_EFI_SPDM_FIRMWARE_BLOB\n");
+    Print(L"      Signature         - '");
+    for (Index = 0; Index < sizeof(EventDataHeader->Signature); Index++) {
+        Print(L"%c", EventDataHeader->Signature[Index]);
+    }
+    Print(L"'\n");
+    Print(L"      Version           - 0x%04x\n", EventDataHeader->Version);
+    Print(L"      Length            - 0x%04x\n", EventDataHeader->Length);
+    Print(L"      SpdmHashAlgo      - 0x%08x\n", EventDataHeader->SpdmHashAlgo);
+    Print(L"      DeviceType        - 0x%08x\n", EventDataHeader->DeviceType);
+
+    Print(L"      SpdmMeasurementBlock:\n");
+    CommonHeader = (SPDM_MEASUREMENT_BLOCK_COMMON_HEADER*)((UINT8*)EventDataHeader + sizeof(TCG_DEVICE_SECURITY_EVENT_DATA_HEADER));
+    Print(L"        Index             - 0x%02x\n", CommonHeader->Index);
+    Print(L"        MeasurementSpec   - 0x%02x\n", CommonHeader->MeasurementSpecification);
+    Print(L"        MeasurementSize   - 0x%04x\n", CommonHeader->MeasurementSize);
+
+    Print(L"        Measurement:\n");
+    DmtfHeader = (SPDM_MEASUREMENT_BLOCK_DMTF_HEADER*)((UINT8*)CommonHeader + sizeof(SPDM_MEASUREMENT_BLOCK_COMMON_HEADER));
+    Print(L"          DMTFSpecMeasurementValueType - 0x%02x\n", DmtfHeader->DMTFSpecMeasurementValueType);
+    Print(L"          DMTFSpecMeasurementValueSize - 0x%04x\n", DmtfHeader->DMTFSpecMeasurementValueSize);
+    Print(L"          DMTFSpecMeasurementValue     - ");
+    MeasurementBuffer = (UINT8*)((UINT8*)DmtfHeader + sizeof(SPDM_MEASUREMENT_BLOCK_DMTF_HEADER));
+    for (Index = 0; Index < DmtfHeader->DMTFSpecMeasurementValueSize; Index++) {
+        Print(L"%02x", MeasurementBuffer[Index]);
+    }
+    Print(L"\n");
+
+    switch (EventDataHeader->DeviceType) {
+    case TCG_DEVICE_SECURITY_EVENT_DATA_DEVICE_TYPE_NULL:
+      Print(L"      DeviceSecurityEventData - No Context\n");
+      break;
+    case TCG_DEVICE_SECURITY_EVENT_DATA_DEVICE_TYPE_PCI:
+      Print(L"      DeviceSecurityEventData - PCI Context\n");
+      PciContext = (TCG_DEVICE_SECURITY_EVENT_DATA_PCI_CONTEXT*)(MeasurementBuffer + DmtfHeader->DMTFSpecMeasurementValueSize);
+      Print(L"        Version           - 0x%04x\n", PciContext->Version);
+      Print(L"        Length            - 0x%04x\n", PciContext->Length);
+      Print(L"        VendorId          - 0x%04x\n", PciContext->VendorId);
+      Print(L"        DeviceId          - 0x%04x\n", PciContext->DeviceId);
+      Print(L"        RevisionID        - 0x%02x\n", PciContext->RevisionID);
+      Print(L"        ClassCode         - 0x%06x\n", PciContext->ClassCode[2] << 16 | PciContext->ClassCode[1] << 8| PciContext->ClassCode[0]);
+      Print(L"        SubsystemVendorID - 0x%04x\n", PciContext->SubsystemVendorID);
+      Print(L"        SubsystemID       - 0x%04x\n", PciContext->SubsystemID);
+      break;
+    case TCG_DEVICE_SECURITY_EVENT_DATA_DEVICE_TYPE_USB:
+      Print(L"      DeviceSecurityEventData - USB Context\n");
+      break;
+    default:
+      Print(L"      DeviceSecurityEventData - Reserved\n");
+    }
+
+    break;
+
+  default:
+    Print(L"Do not support to parse this type of EventData so far!\n");
+  }
+}
+
+VOID
 DumpEvent2 (
   IN TCG_PCR_EVENT2        *TcgPcrEvent2
   )
@@ -347,7 +560,6 @@ DumpEvent2 (
   Print (L"  Event:\n");
   Print (L"    PCRIndex  - %d\n", TcgPcrEvent2->PCRIndex);
   Print (L"    EventType - 0x%08x\n", TcgPcrEvent2->EventType);
-
   Print (L"    DigestCount: 0x%08x\n", TcgPcrEvent2->Digest.count);
 
   DigestCount = TcgPcrEvent2->Digest.count;
@@ -372,7 +584,7 @@ DumpEvent2 (
   CopyMem (&EventSize, DigestBuffer, sizeof(TcgPcrEvent2->EventSize));
   Print (L"    EventSize - 0x%08x\n", EventSize);
   EventBuffer = DigestBuffer + sizeof(TcgPcrEvent2->EventSize);
-  InternalDumpHex (EventBuffer, EventSize);
+  ParseEvent2Data (TcgPcrEvent2, EventBuffer, EventSize);
 }
 
 UINTN
