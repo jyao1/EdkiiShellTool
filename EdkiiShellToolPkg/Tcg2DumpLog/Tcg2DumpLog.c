@@ -248,106 +248,89 @@ ExtendEvent (
 }
 
 VOID
-DumpEvent (
-  IN TCG_PCR_EVENT_HDR         *EventHdr
+DumpTcgSp800155PlatformIdEvent2Struct (
+  IN TCG_Sp800_155_PlatformId_Event2   *TcgSp800155PlatformIdEvent2Struct
   )
 {
-  UINTN                     Index;
-
-  Print (L"  Event:\n");
-  Print (L"    PCRIndex  - %d\n", EventHdr->PCRIndex);
-  Print (L"    EventType - 0x%08x\n", EventHdr->EventType);
-  Print (L"    Digest    - ");
-  for (Index = 0; Index < sizeof(TCG_DIGEST); Index++) {
-    Print (L"%02x", EventHdr->Digest.digest[Index]);
-  }
-  Print (L"\n");
-  Print (L"    EventSize - 0x%08x\n", EventHdr->EventSize);
-  InternalDumpHex ((UINT8 *)(EventHdr + 1), EventHdr->EventSize);
-}
-
-/**
-  This function dump TCG_EfiSpecIDEventStruct.
-
-  @param[in]  TcgEfiSpecIdEventStruct     A pointer to TCG_EfiSpecIDEventStruct.
-**/
-VOID
-DumpTcgEfiSpecIdEventStruct (
-  IN TCG_EfiSpecIDEventStruct   *TcgEfiSpecIdEventStruct
-  )
-{
-  TCG_EfiSpecIdEventAlgorithmSize  *digestSize;
   UINTN                            Index;
-  UINT8                            *vendorInfoSize;
-  UINT8                            *vendorInfo;
-  UINT32                           numberOfAlgorithms;
+  UINT8                            *StrSize;
+  UINT8                            *StrBuffer;
+  UINT32                           *Id;
 
-  Print (L"  TCG_EfiSpecIDEventStruct:\n");
-  Print (L"    signature          - '");
-  for (Index = 0; Index < sizeof(TcgEfiSpecIdEventStruct->signature); Index++) {
-    Print (L"%c", TcgEfiSpecIdEventStruct->signature[Index]);
+  Print (L"  TcgSp800155PlatformIdEvent2Struct:\n");
+  Print (L"    signature                   - '");
+  for (Index = 0; Index < sizeof(TcgSp800155PlatformIdEvent2Struct->Signature); Index++) {
+    Print (L"%c", TcgSp800155PlatformIdEvent2Struct->Signature[Index]);
   }
   Print (L"'\n");
-  Print (L"    platformClass      - 0x%08x\n", TcgEfiSpecIdEventStruct->platformClass);
-  Print (L"    specVersion        - %d.%d%d\n", TcgEfiSpecIdEventStruct->specVersionMajor, TcgEfiSpecIdEventStruct->specVersionMinor, TcgEfiSpecIdEventStruct->specErrata);
-  Print (L"    uintnSize          - 0x%02x\n", TcgEfiSpecIdEventStruct->uintnSize);
+  Print (L"    VendorId                    - 0x%08x\n", TcgSp800155PlatformIdEvent2Struct->VendorId);
+  Print (L"    ReferenceManifestGuid       - %g\n", &TcgSp800155PlatformIdEvent2Struct->ReferenceManifestGuid);
 
-  CopyMem (&numberOfAlgorithms, TcgEfiSpecIdEventStruct + 1, sizeof(numberOfAlgorithms));
-  Print (L"    numberOfAlgorithms - 0x%08x\n", numberOfAlgorithms);
+  StrSize = (UINT8 *)(TcgSp800155PlatformIdEvent2Struct + 1);
+  StrBuffer = StrSize + 1;
+  Print (L"    PlatformManufacturerStrSize - 0x%02x\n", *StrSize);
+  Print (L"    PlatformManufacturerStr     - %a\n", StrBuffer);
 
-  digestSize = (TCG_EfiSpecIdEventAlgorithmSize *)((UINT8 *)TcgEfiSpecIdEventStruct + sizeof(*TcgEfiSpecIdEventStruct) + sizeof(numberOfAlgorithms));
-  for (Index = 0; Index < numberOfAlgorithms; Index++) {
-    Print (L"    digest(%d)\n", Index);
-    Print (L"      algorithmId      - 0x%04x\n", digestSize[Index].algorithmId);
-    Print (L"      digestSize       - 0x%04x\n", digestSize[Index].digestSize);
-  }
-  vendorInfoSize = (UINT8 *)&digestSize[numberOfAlgorithms];
-  Print (L"    vendorInfoSize     - 0x%02x\n", *vendorInfoSize);
-  vendorInfo = vendorInfoSize + 1;
-  Print (L"    vendorInfo         - ");
-  for (Index = 0; Index < *vendorInfoSize; Index++) {
-    Print (L"%02x", vendorInfo[Index]);
-  }
-  Print (L"\n");
-}
+  StrSize = (UINT8 *)(StrBuffer + *StrSize);
+  StrBuffer = StrSize + 1;
+  Print (L"    PlatformModelSize           - 0x%02x\n", *StrSize);
+  Print (L"    PlatformModel               - %a\n", StrBuffer);
 
-/**
-  This function get size of TCG_EfiSpecIDEventStruct.
+  StrSize = (UINT8 *)(StrBuffer + *StrSize);
+  StrBuffer = StrSize + 1;
+  Print (L"    PlatformVersionSize         - 0x%02x\n", *StrSize);
+  Print (L"    PlatformVersion             - %a\n", StrBuffer);
 
-  @param[in]  TcgEfiSpecIdEventStruct     A pointer to TCG_EfiSpecIDEventStruct.
-**/
-UINTN
-GetTcgEfiSpecIdEventStructSize (
-  IN TCG_EfiSpecIDEventStruct   *TcgEfiSpecIdEventStruct
-  )
-{
-  TCG_EfiSpecIdEventAlgorithmSize  *digestSize;
-  UINT8                            *vendorInfoSize;
-  UINT32                           numberOfAlgorithms;
+  StrSize = (UINT8 *)(StrBuffer + *StrSize);
+  StrBuffer = StrSize + 1;
+  Print (L"    FirmwareManufacturerStrSize - 0x%02x\n", *StrSize);
+  Print (L"    FirmwareManufacturerStr     - %a\n", StrBuffer);
 
-  CopyMem (&numberOfAlgorithms, TcgEfiSpecIdEventStruct + 1, sizeof(numberOfAlgorithms));
+  Id = (UINT32 *)(StrBuffer + *StrSize);
+  Print (L"    FirmwareManufacturerId      - 0x%08x\n", *Id);
 
-  digestSize = (TCG_EfiSpecIdEventAlgorithmSize *)((UINT8 *)TcgEfiSpecIdEventStruct + sizeof(*TcgEfiSpecIdEventStruct) + sizeof(numberOfAlgorithms));
-  vendorInfoSize = (UINT8 *)&digestSize[numberOfAlgorithms];
-  return sizeof(TCG_EfiSpecIDEventStruct) + sizeof(UINT32) + (numberOfAlgorithms * sizeof(TCG_EfiSpecIdEventAlgorithmSize)) + sizeof(UINT8) + (*vendorInfoSize);
+  StrSize = (UINT8 *)(Id + 1);
+  StrBuffer = StrSize + 1;
+  Print (L"    FirmwareVersionSize         - 0x%02x\n", *StrSize);
+  Print (L"    FirmwareVersion             - %a\n", StrBuffer);
 }
 
 VOID
-ParseEvent2Data (
-  IN TCG_PCR_EVENT2        *TcgPcrEvent2,
+DumpTcgStartupLocalityEventStruct (
+  IN TCG_EfiStartupLocalityEvent   *TcgStartupLocalityEventStruct
+  )
+{
+  UINTN  Index;
+
+  Print (L"  TcgStartupLocalityEventStruct:\n");
+  Print (L"    signature       - '");
+  for (Index = 0; Index < sizeof(TcgStartupLocalityEventStruct->Signature); Index++) {
+    Print (L"%c", TcgStartupLocalityEventStruct->Signature[Index]);
+  }
+  Print (L"'\n");
+  Print (L"    StartupLocality - 0x%02x\n", TcgStartupLocalityEventStruct->StartupLocality);
+}
+
+VOID
+ParseEventData (
+  IN TCG_EVENTTYPE         EventType,
   IN UINT8                 *EventBuffer,
   IN UINTN                 EventSize
   )
 {
   UINTN                                         Index;
 
-  EFI_VARIABLE_DATA                             *EfiVariableData;
+  UEFI_VARIABLE_DATA                            *UefiVariableData;
   UINT8                                         *VariableData;
   
   EFI_IMAGE_LOAD_EVENT                          *EfiImageLoadEvent;
 
   EFI_PLATFORM_FIRMWARE_BLOB                    *EfiPlatformFirmwareBlob;
+  UEFI_PLATFORM_FIRMWARE_BLOB                   *UefiPlatformFirmwareBlob;
+  UEFI_PLATFORM_FIRMWARE_BLOB2                  *UefiPlatformFirmwareBlob2;
   EFI_HANDOFF_TABLE_POINTERS                    *EfiHandoffTablePointers;
+  UEFI_HANDOFF_TABLE_POINTERS                   *UefiHandoffTablePointers;
+  UEFI_HANDOFF_TABLE_POINTERS2                  *UefiHandoffTablePointers2;
 
   TCG_DEVICE_SECURITY_EVENT_DATA_HEADER         *EventDataHeader;
   SPDM_MEASUREMENT_BLOCK_COMMON_HEADER          *CommonHeader;
@@ -355,7 +338,9 @@ ParseEvent2Data (
   UINT8                                         *MeasurementBuffer;
   TCG_DEVICE_SECURITY_EVENT_DATA_PCI_CONTEXT    *PciContext;
 
-  switch (TcgPcrEvent2->EventType) {
+  InternalDumpHex (EventBuffer, EventSize);
+
+  switch (EventType) {
   case EV_POST_CODE:
     Print(L"    EventData - Type: EV_POST_CODE\n");
     Print(L"      POST CODE - \"");
@@ -369,12 +354,22 @@ ParseEvent2Data (
 
   case EV_NO_ACTION:
     Print(L"    EventData - Type: EV_NO_ACTION\n");
-    Print(L"      No ACTION - ");
 
-    for (Index = 0; Index < EventSize; Index++) {
-      Print(L"%02x ", EventBuffer[Index]);
+    if ((EventSize >= sizeof(TCG_Sp800_155_PlatformId_Event2)) &&
+        (CompareMem (EventBuffer, TCG_Sp800_155_PlatformId_Event2_SIGNATURE, sizeof(TCG_Sp800_155_PlatformId_Event2_SIGNATURE) - 1) == 0)) {
+      DumpTcgSp800155PlatformIdEvent2Struct ((TCG_Sp800_155_PlatformId_Event2 *)EventBuffer);
+
+      break;
     }
-    Print(L"\n");
+
+    if ((EventSize >= sizeof(TCG_EfiStartupLocalityEvent)) &&
+        (CompareMem (EventBuffer, TCG_EfiStartupLocalityEvent_SIGNATURE, sizeof(TCG_EfiStartupLocalityEvent_SIGNATURE)) == 0)) {
+      DumpTcgStartupLocalityEventStruct ((TCG_EfiStartupLocalityEvent *)EventBuffer);
+
+      break;
+    }
+    
+    Print(L"  Unknown EV_NO_ACTION\n");
 
     break;
 
@@ -386,49 +381,49 @@ ParseEvent2Data (
 
   case EV_S_CRTM_VERSION:
     Print(L"    EventData - Type: EV_S_CRTM_VERSION\n");
-    Print(L"      CRTM VERSION - ");
+    Print(L"      CRTM VERSION - L\"");
 
-    for (Index = 0; Index < EventSize; Index++) {
-      Print(L"%02x ", EventBuffer[Index]);
+    for (Index = 0; Index < EventSize; Index+=2) {
+      Print(L"%c", EventBuffer[Index]);
     }
-    Print(L"\n");
+    Print(L"\"\n");
 
     break;
 
   case EV_EFI_VARIABLE_DRIVER_CONFIG:
   case EV_EFI_VARIABLE_BOOT:
-    if (TcgPcrEvent2->EventType == EV_EFI_VARIABLE_DRIVER_CONFIG) {
+    if (EventType == EV_EFI_VARIABLE_DRIVER_CONFIG) {
       Print(L"    EventData - Type: EV_EFI_VARIABLE_DRIVER_CONFIG\n");
-    } else if (TcgPcrEvent2->EventType == EV_EFI_VARIABLE_BOOT) {
+    } else if (EventType == EV_EFI_VARIABLE_BOOT) {
       Print(L"    EventData - Type: EV_EFI_VARIABLE_BOOT\n");
     }
 
-    EfiVariableData = (EFI_VARIABLE_DATA*)EventBuffer;
-    Print(L"      VariableName       - %g\n", EfiVariableData->VariableName);
-    Print(L"      UnicodeNameLength  - 0x%016x\n", EfiVariableData->UnicodeNameLength);
-    Print(L"      VariableDataLength - 0x%016x\n", EfiVariableData->VariableDataLength);
+    UefiVariableData = (UEFI_VARIABLE_DATA*)EventBuffer;
+    Print(L"      VariableName       - %g\n", UefiVariableData->VariableName);
+    Print(L"      UnicodeNameLength  - 0x%016x\n", UefiVariableData->UnicodeNameLength);
+    Print(L"      VariableDataLength - 0x%016x\n", UefiVariableData->VariableDataLength);
 
     Print(L"      UnicodeName        - ");
-    for (Index = 0; Index < EfiVariableData->UnicodeNameLength; Index++) {
-      Print(L"%c", EfiVariableData->UnicodeName[Index]);
+    for (Index = 0; Index < UefiVariableData->UnicodeNameLength; Index++) {
+      Print(L"%c", UefiVariableData->UnicodeName[Index]);
     }
     Print(L"\n");
 
-    VariableData = (UINT8*)&EfiVariableData->UnicodeName[Index];
+    VariableData = (UINT8*)&UefiVariableData->UnicodeName[Index];
     Print(L"      VariableData       - ");
 
-    for (Index = 0; Index < EfiVariableData->VariableDataLength; Index++) {
+    for (Index = 0; Index < UefiVariableData->VariableDataLength; Index++) {
       Print(L"%02x ", VariableData[Index]);
 
       if ((Index + 1) % 0x10 == 0) {
         Print(L"\n");
-        if (Index + 1 < EfiVariableData->VariableDataLength) {
+        if (Index + 1 < UefiVariableData->VariableDataLength) {
           Print(L"                           ");
         }
       }
     }
 
-    if (EfiVariableData->VariableDataLength == 0 || EfiVariableData->VariableDataLength % 0x10 != 0) {
+    if (UefiVariableData->VariableDataLength == 0 || UefiVariableData->VariableDataLength % 0x10 != 0) {
       Print(L"\n");
     }
 
@@ -436,10 +431,13 @@ ParseEvent2Data (
 
   case EV_EFI_BOOT_SERVICES_APPLICATION:
   case EV_EFI_BOOT_SERVICES_DRIVER:
-    if (TcgPcrEvent2->EventType == EV_EFI_BOOT_SERVICES_APPLICATION) {
+  case EV_EFI_RUNTIME_SERVICES_DRIVER:
+    if (EventType == EV_EFI_BOOT_SERVICES_APPLICATION) {
       Print(L"    EventData - Type: EV_EFI_BOOT_SERVICES_APPLICATION\n");
-    } else if (TcgPcrEvent2->EventType == EV_EFI_BOOT_SERVICES_DRIVER) {
+    } else if (EventType == EV_EFI_BOOT_SERVICES_DRIVER) {
       Print(L"    EventData - Type: EV_EFI_BOOT_SERVICES_DRIVER\n");
+    } else if (EventType == EV_EFI_RUNTIME_SERVICES_DRIVER) {
+      Print(L"    EventData - Type: EV_EFI_RUNTIME_SERVICES_DRIVER\n");
     }
 
     EfiImageLoadEvent = (EFI_IMAGE_LOAD_EVENT*)EventBuffer;
@@ -471,6 +469,23 @@ ParseEvent2Data (
 
     break;
 
+  case EV_EFI_PLATFORM_FIRMWARE_BLOB2:
+    UefiPlatformFirmwareBlob2 = (UEFI_PLATFORM_FIRMWARE_BLOB2*)EventBuffer;
+    UefiPlatformFirmwareBlob = (UEFI_PLATFORM_FIRMWARE_BLOB*)(EventBuffer +
+                                 sizeof(UefiPlatformFirmwareBlob2->BlobDescriptionSize) +
+                                 UefiPlatformFirmwareBlob2->BlobDescriptionSize);
+    Print(L"    EventData - Type: EV_EFI_PLATFORM_FIRMWARE_BLOB2\n");
+    Print(L"      BlobDescriptionSize - 0x%02x\n", UefiPlatformFirmwareBlob2->BlobDescriptionSize);
+    Print(L"      BlobDescription     - \"");
+    for (Index = 0; Index < UefiPlatformFirmwareBlob2->BlobDescriptionSize; Index++) {
+      Print(L"%c", *(EventBuffer + sizeof(UefiPlatformFirmwareBlob2->BlobDescriptionSize) + Index));
+    }
+    Print(L"\"\n");
+    Print(L"      BlobBase   - 0x%016x\n", UefiPlatformFirmwareBlob->BlobBase);
+    Print(L"      BlobLength - 0x%016x\n", UefiPlatformFirmwareBlob->BlobLength);
+
+    break;
+
   case EV_EFI_HANDOFF_TABLES:
     EfiHandoffTablePointers = (EFI_HANDOFF_TABLE_POINTERS*)EventBuffer;
     Print(L"    EventData - Type: EV_EFI_HANDOFF_TABLES\n");
@@ -483,9 +498,36 @@ ParseEvent2Data (
 
     break;
 
+  case EV_EFI_HANDOFF_TABLES2:
+    UefiHandoffTablePointers2 = (UEFI_HANDOFF_TABLE_POINTERS2*)EventBuffer;
+    UefiHandoffTablePointers = (UEFI_HANDOFF_TABLE_POINTERS*)(EventBuffer +
+                                 sizeof(UefiHandoffTablePointers2->TableDescriptionSize) +
+                                 UefiHandoffTablePointers2->TableDescriptionSize);
+    Print(L"    EventData - Type: EV_EFI_HANDOFF_TABLES2\n");
+    Print(L"      TableDescriptionSize - 0x%02x\n", UefiHandoffTablePointers2->TableDescriptionSize);
+    Print(L"      TableDescription     - \"");
+    for (Index = 0; Index < UefiHandoffTablePointers2->TableDescriptionSize; Index++) {
+      Print(L"%c", *(EventBuffer + sizeof(UefiHandoffTablePointers2->TableDescriptionSize) + Index));
+    }
+    Print(L"\"\n");
+
+    Print(L"      NumberOfTables - 0x%016x\n", UefiHandoffTablePointers->NumberOfTables);
+    for (Index = 0; Index < UefiHandoffTablePointers->NumberOfTables; Index++) {
+      Print(L"      TableEntry (%d):\n", Index);
+      Print(L"        VendorGuid  - %g\n", UefiHandoffTablePointers->TableEntry[Index].VendorGuid);
+      Print(L"        VendorTable - 0x%016x\n", UefiHandoffTablePointers->TableEntry[Index].VendorTable);
+    }
+
+    break;
+
   case EV_EFI_SPDM_FIRMWARE_BLOB:
+  case EV_EFI_SPDM_FIRMWARE_CONFIG:
+    if (EventType == EV_EFI_SPDM_FIRMWARE_BLOB) {
+      Print(L"    EventData - Type: EV_EFI_SPDM_FIRMWARE_BLOB\n");
+    } else if (EventType == EV_EFI_SPDM_FIRMWARE_CONFIG) {
+      Print(L"    EventData - Type: EV_EFI_SPDM_FIRMWARE_CONFIG\n");
+    }
     EventDataHeader = (TCG_DEVICE_SECURITY_EVENT_DATA_HEADER*)EventBuffer;
-    Print(L"    EventData - Type: EV_EFI_SPDM_FIRMWARE_BLOB\n");
     Print(L"      Signature         - '");
     for (Index = 0; Index < sizeof(EventDataHeader->Signature); Index++) {
         Print(L"%c", EventDataHeader->Signature[Index]);
@@ -539,8 +581,94 @@ ParseEvent2Data (
     break;
 
   default:
-    Print(L"Do not support to parse this type of EventData so far!\n");
+    Print(L"Unknown Event Type\n");
+    break;
   }
+}
+
+VOID
+DumpEvent (
+  IN TCG_PCR_EVENT_HDR         *EventHdr
+  )
+{
+  UINTN                     Index;
+
+  Print (L"  Event:\n");
+  Print (L"    PCRIndex  - %d\n", EventHdr->PCRIndex);
+  Print (L"    EventType - 0x%08x\n", EventHdr->EventType);
+  Print (L"    Digest    - ");
+  for (Index = 0; Index < sizeof(TCG_DIGEST); Index++) {
+    Print (L"%02x", EventHdr->Digest.digest[Index]);
+  }
+  Print (L"\n");
+  Print (L"    EventSize - 0x%08x\n", EventHdr->EventSize);
+  ParseEventData (EventHdr->EventType, (UINT8 *)(EventHdr + 1), EventHdr->EventSize);
+}
+
+/**
+  This function dump TCG_EfiSpecIDEventStruct.
+
+  @param[in]  TcgEfiSpecIdEventStruct     A pointer to TCG_EfiSpecIDEventStruct.
+**/
+VOID
+DumpTcgEfiSpecIdEventStruct (
+  IN TCG_EfiSpecIDEventStruct   *TcgEfiSpecIdEventStruct
+  )
+{
+  TCG_EfiSpecIdEventAlgorithmSize  *digestSize;
+  UINTN                            Index;
+  UINT8                            *vendorInfoSize;
+  UINT8                            *vendorInfo;
+  UINT32                           numberOfAlgorithms;
+
+  Print (L"  TCG_EfiSpecIDEventStruct:\n");
+  Print (L"    signature          - '");
+  for (Index = 0; Index < sizeof(TcgEfiSpecIdEventStruct->signature); Index++) {
+    Print (L"%c", TcgEfiSpecIdEventStruct->signature[Index]);
+  }
+  Print (L"'\n");
+  Print (L"    platformClass      - 0x%08x\n", TcgEfiSpecIdEventStruct->platformClass);
+  Print (L"    specVersion        - %d.%d.%d\n", TcgEfiSpecIdEventStruct->specVersionMajor, TcgEfiSpecIdEventStruct->specVersionMinor, TcgEfiSpecIdEventStruct->specErrata);
+  Print (L"    uintnSize          - 0x%02x\n", TcgEfiSpecIdEventStruct->uintnSize);
+
+  CopyMem (&numberOfAlgorithms, TcgEfiSpecIdEventStruct + 1, sizeof(numberOfAlgorithms));
+  Print (L"    numberOfAlgorithms - 0x%08x\n", numberOfAlgorithms);
+
+  digestSize = (TCG_EfiSpecIdEventAlgorithmSize *)((UINT8 *)TcgEfiSpecIdEventStruct + sizeof(*TcgEfiSpecIdEventStruct) + sizeof(numberOfAlgorithms));
+  for (Index = 0; Index < numberOfAlgorithms; Index++) {
+    Print (L"    digest(%d)\n", Index);
+    Print (L"      algorithmId      - 0x%04x\n", digestSize[Index].algorithmId);
+    Print (L"      digestSize       - 0x%04x\n", digestSize[Index].digestSize);
+  }
+  vendorInfoSize = (UINT8 *)&digestSize[numberOfAlgorithms];
+  Print (L"    vendorInfoSize     - 0x%02x\n", *vendorInfoSize);
+  vendorInfo = vendorInfoSize + 1;
+  Print (L"    vendorInfo         - ");
+  for (Index = 0; Index < *vendorInfoSize; Index++) {
+    Print (L"%02x", vendorInfo[Index]);
+  }
+  Print (L"\n");
+}
+
+/**
+  This function get size of TCG_EfiSpecIDEventStruct.
+
+  @param[in]  TcgEfiSpecIdEventStruct     A pointer to TCG_EfiSpecIDEventStruct.
+**/
+UINTN
+GetTcgEfiSpecIdEventStructSize (
+  IN TCG_EfiSpecIDEventStruct   *TcgEfiSpecIdEventStruct
+  )
+{
+  TCG_EfiSpecIdEventAlgorithmSize  *digestSize;
+  UINT8                            *vendorInfoSize;
+  UINT32                           numberOfAlgorithms;
+
+  CopyMem (&numberOfAlgorithms, TcgEfiSpecIdEventStruct + 1, sizeof(numberOfAlgorithms));
+
+  digestSize = (TCG_EfiSpecIdEventAlgorithmSize *)((UINT8 *)TcgEfiSpecIdEventStruct + sizeof(*TcgEfiSpecIdEventStruct) + sizeof(numberOfAlgorithms));
+  vendorInfoSize = (UINT8 *)&digestSize[numberOfAlgorithms];
+  return sizeof(TCG_EfiSpecIDEventStruct) + sizeof(UINT32) + (numberOfAlgorithms * sizeof(TCG_EfiSpecIdEventAlgorithmSize)) + sizeof(UINT8) + (*vendorInfoSize);
 }
 
 VOID
@@ -584,7 +712,7 @@ DumpEvent2 (
   CopyMem (&EventSize, DigestBuffer, sizeof(TcgPcrEvent2->EventSize));
   Print (L"    EventSize - 0x%08x\n", EventSize);
   EventBuffer = DigestBuffer + sizeof(TcgPcrEvent2->EventSize);
-  ParseEvent2Data (TcgPcrEvent2, EventBuffer, EventSize);
+  ParseEventData (TcgPcrEvent2->EventType, EventBuffer, EventSize);
 }
 
 UINTN
