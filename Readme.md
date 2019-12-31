@@ -60,6 +60,18 @@ These core database dump features are only for debug purpose. Please do not incl
 
 A tool to dump PCI OPROM information and save PCI OPROM to file.
 
+- PatchMicrocode
+
+A tool to patch the CPU Microcode.
+
+- VtdDump
+
+A tool to dump VTD information according to VTd specification and IOMMU map information according to EDKII implementation. 
+
+- Tcg2Dump
+
+A tool to dump TCG2 event log, according to TCG specification. 
+
 ## Known limitation:
 This package is only the sample code to show the concept.
 It does not have a full validation and does not meet the production quality yet.
