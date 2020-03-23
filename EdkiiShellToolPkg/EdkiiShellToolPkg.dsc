@@ -101,7 +101,7 @@
 
   EdkiiShellToolPkg/SmmProfileDump/SmmProfileDump.inf
   EdkiiShellToolPkg/PcdDump/PcdDump.inf
-  EdkiiShellToolPkg/VtdDump/VtdDump.inf
+  #EdkiiShellToolPkg/VtdDump/VtdDump.inf
 
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/DxeCoreDump/DxeCoreDumpApp.inf
   EdkiiShellToolPkg/EdkiiCoreDatabaseDump/SmmCoreDump/SmmCoreDump.inf
@@ -121,6 +121,8 @@
   EdkiiShellToolPkg/ScsiInfo/ScsiInfo.inf
 
   EdkiiShellToolPkg/PatchMicrocode/PatchMicrocode.inf
+
+  EdkiiShellToolPkg/StackUsage/StackUsage.inf
   
   EdkiiShellToolPkg/InitSerial/InitSerial.inf {
   <LibraryClasses>
