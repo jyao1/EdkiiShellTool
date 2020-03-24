@@ -184,8 +184,12 @@ PrintUsage (
   Print(L"  StackUsage [-info|-begin|-end]\n");
   Print(L"Parameter:\n");
   Print(L"  -info : Display stack allocation and current stack usage\n");
-  Print(L"  -begin: Begin to check stack usage after the app exits\n");
+  Print(L"  -begin: Begin to check stack usage\n");
   Print(L"  -end  : End checking stack usage and display info\n");
+  Print(L"Usage:\n");
+  Print(L"  Step 1: > StackUage.efi -begin\n");
+  Print(L"  Step 2: > TestApp.efi\n");
+  Print(L"  Step 3: > StackUage.efi -end\n");
 }
 
 EFI_STATUS

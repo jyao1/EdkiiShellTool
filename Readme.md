@@ -72,6 +72,13 @@ A tool to dump VTD information according to VTd specification and IOMMU map info
 
 A tool to dump TCG2 event log, according to TCG specification. 
 
+- StackUage
+
+A tool to check the stack usage in an EFI application.
+This tool shows the stack size, current stack location and the stack touched by a UEFI application. 
+UEFI specification requires 128K as minimal. We observed that some special programs require more.
+This tool helps a developer to adjust the stack size.
+
 ## Known limitation:
 This package is only the sample code to show the concept.
 It does not have a full validation and does not meet the production quality yet.
