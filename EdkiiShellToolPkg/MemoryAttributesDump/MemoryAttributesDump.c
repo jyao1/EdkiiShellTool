@@ -78,7 +78,13 @@ DumpMemoryAttributesTable (
   Entry = (EFI_MEMORY_DESCRIPTOR *)(MemoryAttributesTable + 1);
   Print (L"Type       Start            End              # Pages          Attributes\n");
   for (Index = 0; Index < MemoryAttributesTable->NumberOfEntries; Index++) {
-    Print(L"% -10s %016LX-%016LX %016LX %016LX\n", ShortNameOfMemoryType(Entry->Type), Entry->PhysicalStart, Entry->VirtualStart, Entry->NumberOfPages, Entry->Attribute);
+    Print(L"% -10s %016LX-%016LX %016LX %016LX\n", 
+      ShortNameOfMemoryType(Entry->Type),
+      Entry->PhysicalStart,
+      Entry->PhysicalStart + EFI_PAGES_TO_SIZE((UINTN)Entry->NumberOfPages) - 1,
+      Entry->NumberOfPages,
+      Entry->Attribute
+      );
     switch (Entry->Type) {
     case EfiRuntimeServicesCode:
       RTCodePages += Entry->NumberOfPages;
