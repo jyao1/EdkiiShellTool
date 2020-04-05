@@ -130,6 +130,7 @@
     #SerialPortLib|PcAtChipsetPkg/Library/SerialIoLib/SerialIoLib.inf
     SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
   }
+  EdkiiShellToolPkg/DummyRt/DummyRt.inf
 
 [BuildOptions]
   MSVC:DEBUG_*_*_DLINK_FLAGS = /EXPORT:InitializeDriver=$(IMAGE_ENTRY_POINT) /BASE:0x10000 /ALIGN:4096 /FILEALIGN:4096 /SUBSYSTEM:CONSOLE
