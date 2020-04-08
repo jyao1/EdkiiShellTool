@@ -28,6 +28,7 @@
   UefiDriverEntryPoint
   MemoryAllocationLib
   UefiLib
+  UefiBootServicesTableLib
 
 [Depex]
   TRUE
