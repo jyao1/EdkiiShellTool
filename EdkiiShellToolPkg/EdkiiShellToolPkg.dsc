@@ -123,6 +123,8 @@
   EdkiiShellToolPkg/PatchMicrocode/PatchMicrocode.inf
 
   EdkiiShellToolPkg/StackUsage/StackUsage.inf
+
+  EdkiiShellToolPkg/DbxEnroll/DbxEnroll.inf
   
   EdkiiShellToolPkg/InitSerial/InitSerial.inf {
   <LibraryClasses>
