@@ -20,7 +20,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/PrintLib.h>
 #include <Library/UefiLib.h>
 
-#include <Guid/PropertiesTable.h>
 #include <Guid/MemoryAttributesTable.h>
 
 CHAR16 *mMemoryTypeShortName[] = {
@@ -104,17 +103,6 @@ DumpMemoryAttributesTable (
   Print (L"              -------------- \n");
 }
 
-VOID
-DumpPropertiesTable(
-  IN EFI_PROPERTIES_TABLE                     *PropertiesTable
-  )
-{
-  Print(L"PropertiesTable:\n");
-  Print(L"  Version                     - 0x%08x\n", PropertiesTable->Version);
-  Print(L"  Length                      - 0x%08x\n", PropertiesTable->Length);
-  Print(L"  MemoryProtectionAttribute   - 0x%016lx\n", PropertiesTable->MemoryProtectionAttribute);
-}
-
 EFI_STATUS
 EFIAPI
 MemoryAttributesDumpEntrypoint (
@@ -124,16 +112,10 @@ MemoryAttributesDumpEntrypoint (
 {
   EFI_STATUS  Status;
   VOID        *MemoryAttributesTable;
-  VOID        *PropertiesTable;
   
   Status = EfiGetSystemConfigurationTable (&gEfiMemoryAttributesTableGuid, &MemoryAttributesTable);
   if (!EFI_ERROR (Status)) {
     DumpMemoryAttributesTable(MemoryAttributesTable);
-  }
-
-  Status = EfiGetSystemConfigurationTable(&gEfiPropertiesTableGuid, &PropertiesTable);
-  if (!EFI_ERROR(Status)) {
-    DumpPropertiesTable(PropertiesTable);
   }
 
   return EFI_SUCCESS;

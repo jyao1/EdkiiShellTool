@@ -37,7 +37,6 @@
   
 [Guids]
   gEfiMemoryAttributesTableGuid
-  gEfiPropertiesTableGuid
 
 [Depex]
   TRUE
