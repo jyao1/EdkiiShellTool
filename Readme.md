@@ -20,7 +20,7 @@ A tool to dump HOB data structure, according to PI specification.
 
 - MemoryAttributesDump
 
-A tool to dump Memory Attribute Table and Properties Table, according to UEFI specification. 
+A tool to dump Memory Attribute Table, according to UEFI specification. 
 
 - HstiWsmtDump
 
@@ -78,6 +78,10 @@ A tool to check the stack usage in an EFI application.
 This tool shows the stack size, current stack location and the stack touched by a UEFI application. 
 UEFI specification requires 128K as minimal. We observed that some special programs require more.
 This tool helps a developer to adjust the stack size.
+
+- DbxEnroll
+
+A tool to enroll the [revocation list](https://uefi.org/revocationlistfile) in UEFI shell.
 
 ## Known limitation:
 This package is only the sample code to show the concept.
