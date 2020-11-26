@@ -122,7 +122,7 @@ StackUsageCheckBegin (
     );
   SetMem64 (
     gStackBase,
-    BeginAddress- (UINTN)gStackBase - SIZE_1KB,
+    (UINTN)BeginAddress- (UINTN)gStackBase - SIZE_1KB,
     STACK_USAGE_SIGNATURE
     );
 }

@@ -51,11 +51,12 @@
   ReportStatusCodeLib|MdeModulePkg/Library/DxeReportStatusCodeLib/DxeReportStatusCodeLib.inf
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
 
-  Tpm2CommandLib|SecurityPkg\Library\Tpm2CommandLib\Tpm2CommandLib.inf
-  Tpm2DeviceLib|SecurityPkg\Library\Tpm2DeviceLibTcg2\Tpm2DeviceLibTcg2.inf
-  BaseCryptLib|CryptoPkg\Library\BaseCryptLib\BaseCryptLib.inf
-  IntrinsicLib|CryptoPkg\Library\IntrinsicLib\IntrinsicLib.inf
-  OpensslLib|CryptoPkg\Library\OpensslLib\OpensslLib.inf
+  Tpm2CommandLib|SecurityPkg/Library/Tpm2CommandLib/Tpm2CommandLib.inf
+  Tpm2DeviceLib|SecurityPkg/Library/Tpm2DeviceLibTcg2/Tpm2DeviceLibTcg2.inf
+  BaseCryptLib|CryptoPkg/Library/BaseCryptLib/BaseCryptLib.inf
+  IntrinsicLib|CryptoPkg/Library/IntrinsicLib/IntrinsicLib.inf
+  OpensslLib|CryptoPkg/Library/OpensslLib/OpensslLib.inf
+  RngLib|MdePkg/Library/BaseRngLibTimerLib/BaseRngLibTimerLib.inf
   
   SmmChildDumpLib|EdkiiShellToolPkg/EdkiiCoreDatabaseDump/Library/SmmChildDumpLibNull/SmmChildDumpLibNull.inf
   #SmmChildDumpLib|EdkiiShellToolPkg/EdkiiCoreDatabaseDump/Library/SmmChildDumpLibNt32/SmmChildDumpLib.inf

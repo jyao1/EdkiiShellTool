@@ -1589,13 +1589,13 @@ UefiMain (
       //
       if (BinayFileName != NULL) {
         if (mTcg2EventInfo[Index].LogFormat == EFI_TCG2_EVENT_LOG_FORMAT_TCG_1_2) {
-          LastPcrEventSize = GetPcrEventSize((TCG_PCR_EVENT*)EventLogLastEntry);
+          LastPcrEventSize = GetPcrEventSize((TCG_PCR_EVENT*)(UINTN)EventLogLastEntry);
         } else if (mTcg2EventInfo[Index].LogFormat == EFI_TCG2_EVENT_LOG_FORMAT_TCG_2) {
-          LastPcrEventSize = GetPcrEvent2Size((TCG_PCR_EVENT2*)EventLogLastEntry);
+          LastPcrEventSize = GetPcrEvent2Size((TCG_PCR_EVENT2*)(UINTN)EventLogLastEntry);
         }
 
-        BufferSize = EventLogLastEntry - EventLogLocation + LastPcrEventSize;
-        Buffer = (UINT8*)EventLogLocation;
+        BufferSize = (UINTN)(EventLogLastEntry - EventLogLocation + LastPcrEventSize);
+        Buffer = (UINT8*)(UINTN)EventLogLocation;
 
         Print(L"EventLogSize: 0x%lx\n", BufferSize);
         Print(L"    EventLogLocation:  (0x%lx)\n", EventLogLocation);
