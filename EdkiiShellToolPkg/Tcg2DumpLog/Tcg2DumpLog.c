@@ -399,7 +399,7 @@ ParseEventData (
     }
 
     UefiVariableData = (UEFI_VARIABLE_DATA*)EventBuffer;
-    Print(L"      VariableName       - %g\n", UefiVariableData->VariableName);
+    Print(L"      VariableName       - %g\n", &UefiVariableData->VariableName);
     Print(L"      UnicodeNameLength  - 0x%016x\n", UefiVariableData->UnicodeNameLength);
     Print(L"      VariableDataLength - 0x%016x\n", UefiVariableData->VariableDataLength);
 
@@ -492,7 +492,7 @@ ParseEventData (
     Print(L"      NumberOfTables - 0x%016x\n", EfiHandoffTablePointers->NumberOfTables);
     for (Index = 0; Index < EfiHandoffTablePointers->NumberOfTables; Index++) {
       Print(L"      TableEntry (%d):\n", Index);
-      Print(L"        VendorGuid  - %g\n", EfiHandoffTablePointers->TableEntry[Index].VendorGuid);
+      Print(L"        VendorGuid  - %g\n", &EfiHandoffTablePointers->TableEntry[Index].VendorGuid);
       Print(L"        VendorTable - 0x%016x\n", EfiHandoffTablePointers->TableEntry[Index].VendorTable);
     }
 
@@ -514,7 +514,7 @@ ParseEventData (
     Print(L"      NumberOfTables - 0x%016x\n", UefiHandoffTablePointers->NumberOfTables);
     for (Index = 0; Index < UefiHandoffTablePointers->NumberOfTables; Index++) {
       Print(L"      TableEntry (%d):\n", Index);
-      Print(L"        VendorGuid  - %g\n", UefiHandoffTablePointers->TableEntry[Index].VendorGuid);
+      Print(L"        VendorGuid  - %g\n", &UefiHandoffTablePointers->TableEntry[Index].VendorGuid);
       Print(L"        VendorTable - 0x%016x\n", UefiHandoffTablePointers->TableEntry[Index].VendorTable);
     }
 
@@ -1597,7 +1597,7 @@ UefiMain (
         BufferSize = (UINTN)(EventLogLastEntry - EventLogLocation + LastPcrEventSize);
         Buffer = (UINT8*)(UINTN)EventLogLocation;
 
-        Print(L"EventLogSize: 0x%lx\n", BufferSize);
+        Print(L"EventLogSize: 0x%x\n", BufferSize);
         Print(L"    EventLogLocation:  (0x%lx)\n", EventLogLocation);
         Print(L"    EventLogLastEntry: (0x%lx)\n", EventLogLastEntry);
         Print(L"    LastPcrEventSize:  (0x%lx)\n", LastPcrEventSize);
