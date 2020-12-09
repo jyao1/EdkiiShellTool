@@ -496,6 +496,14 @@ WaitForBSYClear (
 
 STATIC
 EFI_STATUS  
+WaitForBSYClear2 (
+  IN  IDE_DEV         *IdeDev,
+  IN  UINTN           TimeoutInMilliSeconds
+  ) __attribute__((unused));
+
+
+STATIC
+EFI_STATUS  
 DRDYReady (
   IN  IDE_DEV         *IdeDev,
   IN  UINTN           DelayInMilliSeconds
@@ -506,14 +514,14 @@ EFI_STATUS
 DRDYReady2 (
   IN  IDE_DEV         *IdeDev,
   IN  UINTN           DelayInMilliSeconds
-  );
+  ) __attribute__((unused));
 
 STATIC
 EFI_STATUS  
 DRQReady (
   IN  IDE_DEV         *IdeDev,
   IN  UINTN           TimeoutInMilliSeconds
-  );
+  ) __attribute__((unused));
   
 STATIC
 EFI_STATUS  
@@ -860,10 +868,10 @@ DetectIDEController (
   IN  IDE_DEV  *IdeDev
   )
 {
-  EFI_STATUS    Status;  
+  EFI_STATUS    Status __attribute__((unused));
   UINT8         ErrorReg;
-  UINT8         StatusReg;
-  UINT8         InitStatusReg;
+  UINT8         StatusReg __attribute__((unused));
+  UINT8         InitStatusReg __attribute__((unused));
   EFI_STATUS    DeviceStatus;
 
   //
@@ -1066,7 +1074,7 @@ ATAIdentify (
   EFI_STATUS           Status;
   EFI_IDENTIFY_DATA    *AtaIdentifyPointer;
   EFI_ATA_SMART_DATA   *AtaSmartPointer;               
-  UINT32               Capacity;
+  UINT32               Capacity __attribute__((unused));
   UINT8                DeviceSelect;
       
   //

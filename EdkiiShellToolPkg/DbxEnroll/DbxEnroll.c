@@ -20,8 +20,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/UefiLib.h>
 #include <Library/DebugLib.h>
 
-UINTN  Argc;
-CHAR16 **Argv;
+extern UINTN  Argc;
+extern CHAR16 **Argv;
 
 EFI_GUID mZeroGuid;
 
