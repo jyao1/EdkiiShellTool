@@ -23,8 +23,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/DevicePathLib.h>
 #include <Protocol/DevicePath.h>
 
-UINTN  Argc;
-CHAR16 **Argv;
+extern UINTN  Argc;
+extern CHAR16 **Argv;
 
 EFI_GUID mZeroGuid;
 
@@ -62,7 +62,7 @@ DumpBootOption (
   Status = GetVariable2 (
              OptionName,
              &gEfiGlobalVariableGuid,
-             &Option,
+             (void **)&Option,
              &OptionSize
              );
   Print (L"Get %s - %r\n", OptionName, Status);
@@ -99,7 +99,7 @@ DumpAllBootOption (
   Status = GetVariable2 (
              L"BootOrder",
              &gEfiGlobalVariableGuid,
-             &Buffer,
+             (void **)&Buffer,
              &BufferSize
              );
   Print (L"Get BootOrder - %r\n", Status);
@@ -134,7 +134,7 @@ GetNewBootIndex (
   Status = GetVariable2 (
              L"BootOrder",
              &gEfiGlobalVariableGuid,
-             &Buffer,
+             (void **)&Buffer,
              &BufferSize
              );
   if (EFI_ERROR(Status)) {

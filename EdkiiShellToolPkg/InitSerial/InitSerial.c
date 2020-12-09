@@ -45,6 +45,6 @@ InitSerialEntryPoint (
   )
 {
   SerialPortInitialize ();
-  SerialPortWrite ("Test Serial\n", sizeof("Test Serial\n"));
+  SerialPortWrite ((UINT8 *)"Test Serial\n", sizeof("Test Serial\n"));
   return EFI_SUCCESS;
 }
