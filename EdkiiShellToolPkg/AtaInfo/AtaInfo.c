@@ -496,33 +496,11 @@ WaitForBSYClear (
 
 STATIC
 EFI_STATUS  
-WaitForBSYClear2 (
-  IN  IDE_DEV         *IdeDev,
-  IN  UINTN           TimeoutInMilliSeconds
-  ) __attribute__((unused));
-
-
-STATIC
-EFI_STATUS  
 DRDYReady (
   IN  IDE_DEV         *IdeDev,
   IN  UINTN           DelayInMilliSeconds
   );
-  
-STATIC
-EFI_STATUS  
-DRDYReady2 (
-  IN  IDE_DEV         *IdeDev,
-  IN  UINTN           DelayInMilliSeconds
-  ) __attribute__((unused));
 
-STATIC
-EFI_STATUS  
-DRQReady (
-  IN  IDE_DEV         *IdeDev,
-  IN  UINTN           TimeoutInMilliSeconds
-  ) __attribute__((unused));
-  
 STATIC
 EFI_STATUS  
 DRQReady2 (
@@ -868,10 +846,7 @@ DetectIDEController (
   IN  IDE_DEV  *IdeDev
   )
 {
-  EFI_STATUS    Status __attribute__((unused));
   UINT8         ErrorReg;
-  UINT8         StatusReg __attribute__((unused));
-  UINT8         InitStatusReg __attribute__((unused));
   EFI_STATUS    DeviceStatus;
 
   //
@@ -922,7 +897,7 @@ DetectIDEController (
   //
   //Save the init slave status register
   //
-  InitStatusReg = IDEReadPortB (IdeDev->PciIo,IdeDev->IoPort->Reg.Status);
+  IDEReadPortB (IdeDev->PciIo,IdeDev->IoPort->Reg.Status);
 
 
   //
@@ -940,7 +915,7 @@ DetectIDEController (
   //
   IDEWritePortB (IdeDev->PciIo,IdeDev->IoPort->Reg.Command, 0x90);
 
-  Status = WaitForBSYClear (IdeDev, 3500);
+  WaitForBSYClear (IdeDev, 3500);
 
   ErrorReg = IDEReadPortB (IdeDev->PciIo,IdeDev->IoPort->Reg1.Error);
 
@@ -989,25 +964,13 @@ DetectIDEController (
     return DeviceStatus;
   }
 
-  StatusReg = IDEReadPortB (IdeDev->PciIo,IdeDev->IoPort->Reg.Status);
+  IDEReadPortB (IdeDev->PciIo,IdeDev->IoPort->Reg.Status);
 
   //
   //Most ATAPI devices don't set DRDY bit, so test with a slow but accurate  
   //   "ATAPI TEST UNIT READY" command
   //
-/*
-  if (((StatusReg & DRDY) == 0) && ((InitStatusReg & DRDY) == 0)) {
-    Status = AtapiTestUnitReady (IdeDev);
 
-    //
-    //Still fail, Slave doesn't exist.
-    //
-    if (EFI_ERROR (Status)) {
-      mSlaveDeviceExist = FALSE;
-      return DeviceStatus;
-    }    
-  }
-*/
   //
   //Error reg is 0x01 and DRDY is ready, 
   //  or ATAPI test unit ready success, 
@@ -1074,7 +1037,6 @@ ATAIdentify (
   EFI_STATUS           Status;
   EFI_IDENTIFY_DATA    *AtaIdentifyPointer;
   EFI_ATA_SMART_DATA   *AtaSmartPointer;               
-  UINT32               Capacity __attribute__((unused));
   UINT8                DeviceSelect;
       
   //
@@ -1190,8 +1152,8 @@ ATAIdentify (
       //
       // Calculate device capacity 
       //       
-      Capacity = (AtaIdentifyPointer->AtaData.user_addressable_sectors_hi << 16) 
-                  | AtaIdentifyPointer->AtaData.user_addressable_sectors_lo ;
+      // Capacity = (AtaIdentifyPointer->AtaData.user_addressable_sectors_hi << 16) 
+      //            | AtaIdentifyPointer->AtaData.user_addressable_sectors_lo ;
       
       return EFI_SUCCESS;
     }
@@ -1958,36 +1920,6 @@ WaitForBSYClear (
     Delay --;
   } while (Delay);
 
-  return (Delay == 0) ? EFI_TIMEOUT : EFI_SUCCESS;
-}
-
-STATIC
-EFI_STATUS  
-WaitForBSYClear2 (
-  IN  IDE_DEV  *IdeDev,
-  IN  UINTN    TimeoutInMilliSeconds
-  )
-{
-  UINT32        Delay; 
-  UINT8         AltRegister;
-  
-  //
-  // This function is used to poll for the BSY bit clear in the 
-  // Alternate Status Register. BSY is clear when the device is not busy.
-  // Every command must be sent after device is not busy.
-  //  
-  
-  Delay = (UINT32)(((TimeoutInMilliSeconds * STALL_1_MILLI_SECOND) / 30) +  1);
-  do {
-    AltRegister = IDEReadPortB(IdeDev->PciIo,IdeDev->IoPort->Alt.AltStatus); 
-    if ((AltRegister & BSY) == 0x00) {
-      break;
-    }
-
-    gBS->Stall(30); 
-    Delay --;
-  } while (Delay);
-  
   return (Delay == 0) ? EFI_TIMEOUT : EFI_SUCCESS;
 }
 
