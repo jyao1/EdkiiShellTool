@@ -36,6 +36,13 @@ typedef struct
   UINT8  ISRStatus;
 } VIRTIOHDR;
 
+typedef struct {
+  UINT64 Addr;
+  UINT32 Len;
+  UINT16 Flags;
+  UINT16 Next;
+} VRING_DESC;
+
 VOID
 EFIAPI
 PrintByByte(UINT8* Content, UINT32 Len) {
@@ -85,6 +92,7 @@ ListPCIMessage (VOID)
 {
   UINTN i = 0;
   PCI_TYPE00 Pci;
+  UINTN      DescTableSize;
   VIRTIOHDR  PciVirtioHdr;
 
   for (i = 0; i < gPCIIO_Count; i ++) {
@@ -120,7 +128,7 @@ ListPCIMessage (VOID)
         Print (L"    Virtio Header Info\n");
         Print (L"    Device Features  - 0x%08x\n", PciVirtioHdr.DeviceFeatures);
         Print (L"    Guest Features   - 0x%08x\n", PciVirtioHdr.GuestFeatures);
-        Print (L"    Queue Address    - 0x%08x\n", PciVirtioHdr.QueueAddress);
+        Print (L"    Queue Address    - 0x%08x\n", PciVirtioHdr.QueueAddress << EFI_PAGE_SHIFT);
         Print (L"    Queue Size       - 0x%04x\n", PciVirtioHdr.QueueSize);
         Print (L"    Queue Select     - 0x%04x\n", PciVirtioHdr.QueueSelect);
         Print (L"    Queue Notify     - 0x%04x\n", PciVirtioHdr.QueueNotify);
@@ -131,29 +139,20 @@ ListPCIMessage (VOID)
         PrintByByte ((UINT8 *) &PciVirtioHdr, sizeof (PciVirtioHdr));
         Print (L"##################################################\n");
 
-        
-        // UINTN           RingSize;
-        // VRING           *Ring;
-        // RingSize = ALIGN_VALUE (
-        //        sizeof *Ring->Desc            * PciVirtioHdr.QueueSize +
-        //        sizeof *Ring->Avail.Flags                 +
-        //        sizeof *Ring->Avail.Idx                   +
-        //        sizeof *Ring->Avail.Ring      * PciVirtioHdr.QueueSize +
-        //        sizeof *Ring->Avail.UsedEvent,
-        //        EFI_PAGE_SIZE
-        //        );
+        DescTableSize = sizeof (VRING_DESC) * PciVirtioHdr.QueueSize;
+        Print (L"    Virtioqueue Descriptors Table\n");
+        PrintByByte ((UINT8 *) (UINT64)(PciVirtioHdr.QueueAddress << EFI_PAGE_SHIFT), DescTableSize);
+        Print (L"##################################################\n");
 
-        // RingSize += ALIGN_VALUE (
-        //         sizeof *Ring->Used.Flags                  +
-        //         sizeof *Ring->Used.Idx                    +
-        //         sizeof *Ring->Used.UsedElem   * PciVirtioHdr.QueueSize +
-        //         sizeof *Ring->Used.AvailEvent,
-        //         EFI_PAGE_SIZE
-        //         );
+        Print (L"    Virtioqueue Avaliable Ring\n");
+        PrintByByte ((UINT8 *) (UINT64)((PciVirtioHdr.QueueAddress << EFI_PAGE_SHIFT) + DescTableSize), EFI_PAGE_SIZE - DescTableSize);
+        Print (L"##################################################\n");
+
+        Print (L"    Virtioqueue Used Ring\n");
+        PrintByByte ((UINT8 *) (UINT64)((PciVirtioHdr.QueueAddress << EFI_PAGE_SHIFT) + EFI_PAGE_SIZE), EFI_PAGE_SIZE);
+        Print (L"##################################################\n");
       }
-
     }
-    
   }
 
   return EFI_SUCCESS;
