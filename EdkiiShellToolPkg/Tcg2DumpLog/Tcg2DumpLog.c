@@ -90,6 +90,7 @@ SHELL_PARAM_ITEM mParamList[] = {
   {L"-L",   TypeValue},
   {L"-E",   TypeFlag},
   {L"-BIN", TypeValue},
+  {L"-PARSE", TypeValue},
   {L"-C",   TypeFlag},
   {L"-A",   TypeFlag},
   {L"-?",   TypeFlag},
@@ -368,7 +369,13 @@ ParseEventData (
 
       break;
     }
-    
+
+    if ((EventSize >= sizeof(TCG_EfiSpecIDEventStruct)) &&
+        ((CompareMem (EventBuffer, TCG_EfiSpecIDEventStruct_SIGNATURE_03, sizeof(TCG_EfiSpecIDEventStruct_SIGNATURE_03) - 1) == 0) ||
+         (CompareMem (EventBuffer, TCG_EfiSpecIDEventStruct_SIGNATURE_02, sizeof(TCG_EfiSpecIDEventStruct_SIGNATURE_02) - 1) == 0))) {
+      break;
+    }
+
     Print(L"  Unknown EV_NO_ACTION\n");
 
     break;
@@ -578,6 +585,22 @@ ParseEventData (
       Print(L"      DeviceSecurityEventData - Reserved\n");
     }
 
+    break;
+
+  case 0x00000006:
+    Print(L"    EventData - Type: EV_EVENT_TAG\n");
+    break;
+  case 0x0000000C:
+    Print(L"    EventData - Type: EV_COMPACT_HASH\n");
+    break;
+  case 0x00000011:
+    Print(L"    EventData - Type: EV_NONHOST_INFO\n");
+    break;
+  case 0x80000006:
+    Print(L"    EventData - Type: EV_EFI_GPT_EVENT\n");
+    break;
+  case 0x800000E0:
+    Print(L"    EventData - Type: EV_EFI_VARIABLE_AUTHORITY\n");
     break;
 
   default:
@@ -1321,6 +1344,7 @@ PrintUsage (
     L"usage: Tcg2DumpLog [-I <PcrIndex>] [-L <LogFormat>] [-E] [-BIN <File>]\n"
     L"usage: Tcg2DumpLog [-C]\n"
     L"usage: Tcg2DumpLog [-A]\n"
+    L"usage: Tcg2DumpLog [-PARSE]\n"
     );
   Print (
     L"  -I   - PcrIndex, the valid value is 0-23|ALL (case sensitive)\n"
@@ -1329,8 +1353,91 @@ PrintUsage (
     L"  -BIN - Dump Event Log binary file (Only support TCG2.0 Event Log Format)\n"
     L"  -C   - Dump Tcg2 Capability\n"
     L"  -A   - Dump TPM2 ACPI table\n"
+    L"  -PARSE - Parse Input Event Log binary file (Only support TCG2.0 Event Log Format)\n"
     );
   return;
+}
+
+/**
+  Read a file.
+
+  @param[in]  FileName        The file to be read.
+  @param[out] BufferSize      The file buffer size
+  @param[out] Buffer          The file buffer
+
+  @retval EFI_SUCCESS    Read file successfully
+  @retval EFI_NOT_FOUND  Shell protocol or file not found
+  @retval others         Read file failed
+**/
+EFI_STATUS
+ReadFileToBuffer (
+  IN  CHAR16                               *FileName,
+  OUT UINTN                                *BufferSize,
+  OUT VOID                                 **Buffer
+  )
+{
+  EFI_STATUS                        Status;
+  EFI_SHELL_PROTOCOL                *ShellProtocol;
+  SHELL_FILE_HANDLE                 Handle;
+  UINT64                            FileSize;
+  UINTN                             TempBufferSize;
+  VOID                              *TempBuffer;
+
+  Status = gBS->LocateProtocol(
+                  &gEfiShellProtocolGuid,
+                  NULL,
+                  (VOID **)&ShellProtocol
+                  );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //
+  // Open file by FileName.
+  //
+  Status = ShellProtocol->OpenFileByName (
+                            FileName,
+                            &Handle,
+                            EFI_FILE_MODE_READ
+                            );
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //
+  // Get the file size.
+  //
+  Status = ShellProtocol->GetFileSize (Handle, &FileSize);
+  if (EFI_ERROR (Status)) {
+    ShellProtocol->CloseFile (Handle);
+    return Status;
+  }
+
+  TempBufferSize = (UINTN) FileSize;
+  TempBuffer = AllocateZeroPool (TempBufferSize);
+  if (TempBuffer == NULL) {
+    ShellProtocol->CloseFile (Handle);
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  //
+  // Read the file data to the buffer
+  //
+  Status = ShellProtocol->ReadFile (
+                            Handle,
+                            &TempBufferSize,
+                            TempBuffer
+                            );
+  if (EFI_ERROR (Status)) {
+    ShellProtocol->CloseFile (Handle);
+    return Status;
+  }
+
+  ShellProtocol->CloseFile (Handle);
+
+  *BufferSize = TempBufferSize;
+  *Buffer     = TempBuffer;
+  return EFI_SUCCESS;
 }
 
 /**
@@ -1457,6 +1564,7 @@ UefiMain (
   UINTN                            LastPcrEventSize;
   UINTN                            BufferSize;
   UINT8                            *Buffer;
+  CHAR16                           *ParseBinFileName;
 
   Status = ShellCommandLineParse (mParamList, &ParamPackage, NULL, TRUE);
   if (EFI_ERROR(Status)) {
@@ -1520,6 +1628,18 @@ UefiMain (
   //
   BinayFileName = (CHAR16 *)ShellCommandLineGetValue(ParamPackage, L"-BIN");
   Print(L"Parameter -BIN: BinayFileName = %s\n", BinayFileName);
+
+  //
+  // Parse BinayFile
+  //
+  ParseBinFileName = (CHAR16 *)ShellCommandLineGetValue(ParamPackage, L"-PARSE");
+  if (ParseBinFileName != NULL) {
+    Print(L"Parameter -PARSE: ParseBinFileName = %s\n", ParseBinFileName);
+    ReadFileToBuffer (ParseBinFileName, &BufferSize, &Buffer);
+
+    DumpEventLog (EFI_TCG2_EVENT_LOG_FORMAT_TCG_2, (UINTN)Buffer, (UINTN)Buffer + BufferSize - 1, NULL, PCR_INDEX_ALL, FALSE);
+    return EFI_SUCCESS;
+  }
 
   //
   // Get Tcg2
